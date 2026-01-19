@@ -10,7 +10,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 export const initializeChat = async (): Promise<string> => {
   try {
     chatSession = ai.chats.create({
-      model: 'gemini-2.5-flash-latest', // High speed, good reasoning
+      model: 'gemini-3-flash-preview', // Updated to the recommended latest model
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         temperature: 0.7, // Balanced creativity and coherence
@@ -18,9 +18,6 @@ export const initializeChat = async (): Promise<string> => {
     });
 
     // We trigger the conversation by asking the model to start according to its instructions.
-    // This message is internal and doesn't need to be shown to the user if we don't want to,
-    // but typically we want the model's first output to be the greeting.
-    // However, the `chatSession` is fresh. We can send an empty prompt or a "Start" prompt.
     const response: GenerateContentResponse = await chatSession.sendMessage({
       message: "Olá! Por favor, comece a conversa se apresentando como Boba e seguindo o fluxo definido."
     });
@@ -28,7 +25,11 @@ export const initializeChat = async (): Promise<string> => {
     return response.text || "Olá! Eu sou a Boba. Como posso ajudar hoje?";
   } catch (error) {
     console.error("Failed to initialize chat:", error);
-    return "Desculpe, estou tendo dificuldades para conectar ao meu sistema de inteligência cultural. Por favor, verifique sua conexão.";
+    // More descriptive error for debugging in console
+    if (error instanceof Error) {
+      console.error("Error details:", error.message);
+    }
+    return "Desculpe, estou tendo dificuldades para conectar ao meu sistema de inteligência cultural. Por favor, verifique se sua chave de API está ativa.";
   }
 };
 
@@ -39,7 +40,8 @@ export const sendMessageToGemini = async (userMessage: string): Promise<string> 
   }
 
   if (!chatSession) {
-    throw new Error("Chat session could not be established.");
+    // If still null after retry
+    return "Não foi possível restabelecer a conexão. Por favor, recarregue a página.";
   }
 
   try {
