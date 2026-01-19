@@ -1,14 +1,24 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Message, Role } from './types';
-import { initializeChat, sendMessageToGemini } from './services/geminiService';
+import { Message, Role, Language } from './types';
+import { initializeChat, sendMessageToGemini, changeBotLanguage } from './services/geminiService';
 import { MessageBubble } from './components/MessageBubble';
 import { TypingIndicator } from './components/TypingIndicator';
+import { UI_STRINGS, BOBA_AVATAR_URL } from './constants';
 
 const App: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(true); // Start loading while initializing
+  const [isLoading, setIsLoading] = useState(true);
+  const [language, setLanguage] = useState<Language>('pt');
+  const [isConversationFinished, setIsConversationFinished] = useState(false);
+  
+  // Ref to track if initialization has occurred to prevent strict mode double-firing
+  const hasInitialized = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const ui = UI_STRINGS[language];
+
+  // Key to store conversation status in local storage
+  const STORAGE_KEY = 'boba_conversation_completed_v1';
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -20,9 +30,36 @@ const App: React.FC = () => {
 
   // Initialize Chat on Mount
   useEffect(() => {
+    // Prevent double initialization in React StrictMode
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+
     const startConversation = async () => {
+      // Check if user already finished a conversation
+      const hasFinished = localStorage.getItem(STORAGE_KEY) === 'true';
+      
+      if (hasFinished) {
+        setIsConversationFinished(true);
+        // We initialize with a "Retry blocked" prompt
+        try {
+          const blockMessage = await initializeChat(language, true);
+          setMessages([{
+            id: Date.now().toString(),
+            role: Role.MODEL,
+            text: blockMessage,
+            timestamp: Date.now(),
+          }]);
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      // Normal initialization
       try {
-        const initialGreeting = await initializeChat();
+        const initialGreeting = await initializeChat(language, false);
         const initialMessage: Message = {
           id: Date.now().toString(),
           role: Role.MODEL,
@@ -35,7 +72,7 @@ const App: React.FC = () => {
         setMessages([{
            id: 'error',
            role: Role.MODEL,
-           text: "Olá! Parece que estou com um pouco de dificuldade para me conectar agora. Tente recarregar a página.",
+           text: "Connection error / Erro de conexão",
            timestamp: Date.now()
         }]);
       } finally {
@@ -47,15 +84,47 @@ const App: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const handleLanguageChange = async (newLang: Language) => {
+    if (language === newLang || isLoading) return;
+    
+    setLanguage(newLang);
+    setIsLoading(true);
+
+    try {
+      const responseText = await changeBotLanguage(newLang);
+      
+      if (responseText) {
+        const botMessage: Message = {
+          id: Date.now().toString(),
+          role: Role.MODEL,
+          text: responseText,
+          timestamp: Date.now(),
+        };
+        setMessages((prev) => [...prev, botMessage]);
+      }
+    } catch (error) {
+      console.error("Error changing language", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const checkConversationCompletion = (text: string) => {
+    // If the bot sends the specific WhatsApp link, we consider the conversation done.
+    if (text.includes("wa.me/message/BG24GCPKNF6KG1")) {
+      localStorage.setItem(STORAGE_KEY, 'true');
+      setIsConversationFinished(true);
+    }
+  };
+
   const handleSendMessage = useCallback(async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || isConversationFinished) return;
 
     const userText = input;
     setInput('');
     setIsLoading(true);
 
-    // Optimistic User Message
     const userMessage: Message = {
       id: Date.now().toString(),
       role: Role.USER,
@@ -76,32 +145,60 @@ const App: React.FC = () => {
       };
       
       setMessages((prev) => [...prev, botMessage]);
+      checkConversationCompletion(responseText);
+
     } catch (err) {
       console.error(err);
-      // Optional: Add error message to chat
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading]);
+  }, [input, isLoading, isConversationFinished]);
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-50 overflow-hidden">
-          <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-orange-100 rounded-full blur-[100px]"></div>
-          <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-teal-100 rounded-full blur-[100px]"></div>
+    <div className="flex flex-col h-screen bg-[#F8F8F4] relative overflow-hidden font-sans text-slate-800">
+      
+      {/* Abstract Background Shapes */}
+      <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-40 overflow-hidden">
+          <div className="absolute top-[-5%] right-[-5%] w-[400px] h-[400px] bg-[#FF7D6B] rounded-full blur-[80px]"></div>
+          <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#006A71] rounded-full blur-[100px] opacity-30"></div>
+          <div className="absolute top-[40%] left-[20%] w-[200px] h-[200px] bg-[#EAA823] rounded-full blur-[90px] opacity-20"></div>
       </div>
 
       {/* Header */}
-      <header className="z-10 flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500 to-orange-400 flex items-center justify-center text-white font-bold text-lg shadow-md">
-            B
+      <header className="z-10 flex flex-col sm:flex-row items-center justify-between px-6 py-4 bg-[#F8F8F4]/90 backdrop-blur-md border-b border-[#EAA823]/20 sticky top-0 shadow-sm">
+        <div className="flex items-center gap-3 mb-3 sm:mb-0">
+          <div className="relative w-12 h-12 rounded-full border-2 border-[#FF007F] p-0.5 bg-white overflow-hidden shadow-md">
+            <img src={BOBA_AVATAR_URL} alt="Boba" className="w-full h-full object-cover rounded-full" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-800 tracking-tight">Feltrip</h1>
-            <p className="text-xs text-gray-500 font-medium">Boba • Inteligência Relacional</p>
+            <h1 className="text-xl font-bold text-[#006A71] tracking-tight">{ui.headerTitle}</h1>
+            <p className="text-xs text-[#FF7D6B] font-bold tracking-wide uppercase">{ui.headerSubtitle}</p>
           </div>
+        </div>
+
+        {/* Language Switcher */}
+        <div className="flex bg-white rounded-full p-1 border border-[#006A71]/20 shadow-sm">
+          <button 
+            onClick={() => handleLanguageChange('pt')}
+            disabled={isLoading}
+            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${language === 'pt' ? 'bg-[#006A71] text-white shadow' : 'text-gray-500 hover:text-[#006A71]'} disabled:opacity-50`}
+          >
+            PT
+          </button>
+          <button 
+            onClick={() => handleLanguageChange('en')}
+            disabled={isLoading}
+            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${language === 'en' ? 'bg-[#006A71] text-white shadow' : 'text-gray-500 hover:text-[#006A71]'} disabled:opacity-50`}
+          >
+            EN
+          </button>
+          <button 
+            onClick={() => handleLanguageChange('es')}
+            disabled={isLoading}
+            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${language === 'es' ? 'bg-[#006A71] text-white shadow' : 'text-gray-500 hover:text-[#006A71]'} disabled:opacity-50`}
+          >
+            ES
+          </button>
         </div>
       </header>
 
@@ -123,33 +220,33 @@ const App: React.FC = () => {
       </main>
 
       {/* Input Area */}
-      <footer className="z-20 p-4 bg-white/90 backdrop-blur border-t border-gray-200">
+      <footer className="z-20 p-4 bg-[#F8F8F4]/95 backdrop-blur border-t border-[#006A71]/10">
         <div className="max-w-3xl mx-auto">
           <form 
             onSubmit={handleSendMessage}
-            className="flex gap-2 items-center bg-gray-100 p-1.5 rounded-full border border-gray-200 focus-within:ring-2 focus-within:ring-teal-500/50 focus-within:border-teal-500 transition-all shadow-sm"
+            className="flex gap-2 items-center bg-white p-1.5 rounded-full border border-[#006A71]/20 focus-within:ring-2 focus-within:ring-[#006A71]/30 focus-within:border-[#006A71] transition-all shadow-sm"
           >
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Digite sua mensagem para Boba..."
-              disabled={isLoading}
-              className="flex-1 bg-transparent px-4 py-3 outline-none text-gray-700 placeholder-gray-400 disabled:opacity-50"
+              placeholder={isConversationFinished ? "Conversa finalizada / Conversation ended" : ui.inputPlaceholder}
+              disabled={isLoading || isConversationFinished}
+              className="flex-1 bg-transparent px-4 py-3 outline-none text-[#006A71] placeholder-gray-400 disabled:opacity-50 disabled:text-gray-400"
             />
             <button
               type="submit"
-              disabled={!input.trim() || isLoading}
-              className="p-3 bg-teal-600 text-white rounded-full hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center justify-center"
-              aria-label="Enviar"
+              disabled={!input.trim() || isLoading || isConversationFinished}
+              className="p-3 bg-[#FF007F] text-white rounded-full hover:bg-[#d4006a] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-md flex items-center justify-center"
+              aria-label={ui.send}
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 translate-x-0.5">
                 <path d="M3.478 2.404a.75.75 0 00-.926.941l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.404z" />
               </svg>
             </button>
           </form>
-          <p className="text-center text-xs text-gray-400 mt-2">
-            A Boba não substitui aconselhamento psicológico profissional.
+          <p className="text-center text-xs text-[#006A71]/60 mt-2 font-medium">
+            {ui.disclaimer}
           </p>
         </div>
       </footer>

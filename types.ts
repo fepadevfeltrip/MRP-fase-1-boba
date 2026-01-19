@@ -3,6 +3,8 @@ export enum Role {
   MODEL = 'model'
 }
 
+export type Language = 'pt' | 'en' | 'es';
+
 export interface Message {
   id: string;
   role: Role;
