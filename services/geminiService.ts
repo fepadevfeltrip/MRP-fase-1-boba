@@ -1,6 +1,6 @@
 import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
 import { SYSTEM_INSTRUCTION } from "../constants";
-import { Language } from "../types";
+import { Language, UserLocation } from "../types";
 
 let chatSession: Chat | null = null;
 
@@ -12,7 +12,11 @@ const getAIClient = () => {
   return new GoogleGenAI({ apiKey });
 };
 
-export const initializeChat = async (language: Language = 'pt', isRetryAttempt: boolean = false): Promise<string> => {
+export const initializeChat = async (
+  language: Language = 'pt', 
+  isRetryAttempt: boolean = false,
+  userLocation?: UserLocation
+): Promise<string> => {
   try {
     const ai = getAIClient();
     chatSession = ai.chats.create({
@@ -25,15 +29,20 @@ export const initializeChat = async (language: Language = 'pt', isRetryAttempt: 
     });
 
     let startPrompt = "";
+    
+    // Construct location context string if available
+    const locationContext = userLocation?.city && userLocation?.country_name
+      ? `\n[SISTEMA: O usuário está acessando de: ${userLocation.city}, ${userLocation.country_name}. Use isso para contextualizar a conversa, mas não precisa mencionar explicitamente o IP.]`
+      : "";
 
     if (isRetryAttempt) {
       startPrompt = "SYSTEM COMMAND: BLOCK_RETRY";
     } else {
       startPrompt = language === 'pt' 
-        ? "[INÍCIO DA SESSÃO] Dê as boas vindas. Apresente-se como Boba, uma guia cultural e 'Boba da Corte' (leve e divertida). IMPORTANTE: Já na primeira pergunta, questione se a pessoa está CHEGANDO na cidade (migrante/expat) ou se está RECEBENDO pessoas (anfitrião/local)."
+        ? `[INÍCIO DA SESSÃO]${locationContext} Dê as boas vindas. Apresente-se como Boba, uma guia cultural e 'Boba da Corte' (leve e divertida). IMPORTANTE: Já na primeira pergunta, questione se a pessoa está CHEGANDO na cidade (migrante/expat) ou se está RECEBENDO pessoas (anfitrião/local).`
         : language === 'en'
-        ? "[SESSION START] Welcome the user. Introduce yourself as Boba, a cultural guide and 'Jester' (light and fun). IMPORTANT: In your very first question, ask if they are ARRIVING in the city (migrant/expat) or RECEIVING people (host/local)."
-        : "[INICIO DE SESIÓN] Da la bienvenida. Preséntate como Boba, una guía cultural y 'Bufona' (ligera y divertida). IMPORTANTE: En tu primera pergunta, cuestiona si la persona está LLEGANDO a la ciudad (migrante/expat) o RECIBIENDO personas (anfitrión/local).";
+        ? `[SESSION START]${locationContext} Welcome the user. Introduce yourself as Boba, a cultural guide and 'Jester' (light and fun). IMPORTANT: In your very first question, ask if they are ARRIVING in the city (migrant/expat) or RECEIVING people (host/local).`
+        : `[INICIO DE SESIÓN]${locationContext} Da la bienvenida. Preséntate como Boba, una guía cultural y 'Bufona' (ligera y divertida). IMPORTANTE: En tu primera pergunta, cuestiona si la persona está LLEGANDO a la ciudad (migrante/expat) o RECIBIENDO personas (anfitrión/local).`;
     }
 
     const response: GenerateContentResponse = await chatSession.sendMessage({

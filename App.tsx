@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Message, Role, Language } from './types';
+import { Message, Role, Language, UserLocation } from './types';
 import { initializeChat, sendMessageToGemini, changeBotLanguage } from './services/geminiService';
 import { MessageBubble } from './components/MessageBubble';
 import { TypingIndicator } from './components/TypingIndicator';
@@ -50,10 +50,23 @@ const App: React.FC = () => {
     const startConversation = async () => {
       const hasFinished = checkHasFinished();
       
+      // Attempt to fetch location for metrics/context
+      let userLocation: UserLocation | undefined = undefined;
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        if (res.ok) {
+           userLocation = await res.json();
+           console.log("📍 Location Detected:", userLocation?.city, userLocation?.country_name);
+        }
+      } catch (e) {
+        console.warn("Could not fetch location metrics.");
+      }
+      
       if (hasFinished) {
         setIsConversationFinished(true);
         try {
-          const blockMessage = await initializeChat(language, true);
+          // Pass location even on block message if available
+          const blockMessage = await initializeChat(language, true, userLocation);
           setMessages([{
             id: Date.now().toString(),
             role: Role.MODEL,
@@ -69,7 +82,8 @@ const App: React.FC = () => {
       }
 
       try {
-        const initialGreeting = await initializeChat(language, false);
+        // Initialize chat with location data
+        const initialGreeting = await initializeChat(language, false, userLocation);
         const initialMessage: Message = {
           id: Date.now().toString(),
           role: Role.MODEL,

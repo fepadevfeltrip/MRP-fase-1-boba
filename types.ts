@@ -17,3 +17,9 @@ export interface ChatState {
   isLoading: boolean;
   error: string | null;
 }
+
+export interface UserLocation {
+  city?: string;
+  country_name?: string;
+  ip?: string;
+}
