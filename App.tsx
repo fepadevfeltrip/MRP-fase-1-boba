@@ -12,13 +12,28 @@ const App: React.FC = () => {
   const [language, setLanguage] = useState<Language>('pt');
   const [isConversationFinished, setIsConversationFinished] = useState(false);
   
-  // Ref to track if initialization has occurred to prevent strict mode double-firing
   const hasInitialized = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const ui = UI_STRINGS[language];
 
-  // Key to store conversation status in local storage
   const STORAGE_KEY = 'boba_conversation_completed_v1';
+
+  // Helper to safely access localStorage on mobile browsers
+  const checkHasFinished = () => {
+    try {
+      return localStorage.getItem(STORAGE_KEY) === 'true';
+    } catch (e) {
+      return false; // Fallback if storage is blocked
+    }
+  };
+
+  const setFinishedInStorage = () => {
+    try {
+      localStorage.setItem(STORAGE_KEY, 'true');
+    } catch (e) {
+      // Silently fail if storage is restricted
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -28,19 +43,15 @@ const App: React.FC = () => {
     scrollToBottom();
   }, [messages, isLoading]);
 
-  // Initialize Chat on Mount
   useEffect(() => {
-    // Prevent double initialization in React StrictMode
     if (hasInitialized.current) return;
     hasInitialized.current = true;
 
     const startConversation = async () => {
-      // Check if user already finished a conversation
-      const hasFinished = localStorage.getItem(STORAGE_KEY) === 'true';
+      const hasFinished = checkHasFinished();
       
       if (hasFinished) {
         setIsConversationFinished(true);
-        // We initialize with a "Retry blocked" prompt
         try {
           const blockMessage = await initializeChat(language, true);
           setMessages([{
@@ -57,7 +68,6 @@ const App: React.FC = () => {
         return;
       }
 
-      // Normal initialization
       try {
         const initialGreeting = await initializeChat(language, false);
         const initialMessage: Message = {
@@ -72,7 +82,7 @@ const App: React.FC = () => {
         setMessages([{
            id: 'error',
            role: Role.MODEL,
-           text: "Connection error / Erro de conexão",
+           text: "Erro de conexão. Por favor, tente recarregar a página.",
            timestamp: Date.now()
         }]);
       } finally {
@@ -81,8 +91,7 @@ const App: React.FC = () => {
     };
 
     startConversation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [language]);
 
   const handleLanguageChange = async (newLang: Language) => {
     if (language === newLang || isLoading) return;
@@ -110,9 +119,8 @@ const App: React.FC = () => {
   };
 
   const checkConversationCompletion = (text: string) => {
-    // If the bot sends the specific WhatsApp link, we consider the conversation done.
     if (text.includes("wa.me/message/BG24GCPKNF6KG1")) {
-      localStorage.setItem(STORAGE_KEY, 'true');
+      setFinishedInStorage();
       setIsConversationFinished(true);
     }
   };
@@ -178,27 +186,16 @@ const App: React.FC = () => {
 
         {/* Language Switcher */}
         <div className="flex bg-white rounded-full p-1 border border-[#006A71]/20 shadow-sm">
-          <button 
-            onClick={() => handleLanguageChange('pt')}
-            disabled={isLoading}
-            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${language === 'pt' ? 'bg-[#006A71] text-white shadow' : 'text-gray-500 hover:text-[#006A71]'} disabled:opacity-50`}
-          >
-            PT
-          </button>
-          <button 
-            onClick={() => handleLanguageChange('en')}
-            disabled={isLoading}
-            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${language === 'en' ? 'bg-[#006A71] text-white shadow' : 'text-gray-500 hover:text-[#006A71]'} disabled:opacity-50`}
-          >
-            EN
-          </button>
-          <button 
-            onClick={() => handleLanguageChange('es')}
-            disabled={isLoading}
-            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${language === 'es' ? 'bg-[#006A71] text-white shadow' : 'text-gray-500 hover:text-[#006A71]'} disabled:opacity-50`}
-          >
-            ES
-          </button>
+          {(['pt', 'en', 'es'] as Language[]).map((lang) => (
+            <button 
+              key={lang}
+              onClick={() => handleLanguageChange(lang)}
+              disabled={isLoading}
+              className={`px-3 py-1 rounded-full text-xs font-semibold uppercase transition-all ${language === lang ? 'bg-[#006A71] text-white shadow' : 'text-gray-500 hover:text-[#006A71]'} disabled:opacity-50`}
+            >
+              {lang}
+            </button>
+          ))}
         </div>
       </header>
 
@@ -230,7 +227,7 @@ const App: React.FC = () => {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={isConversationFinished ? "Conversa finalizada / Conversation ended" : ui.inputPlaceholder}
+              placeholder={isConversationFinished ? "Conversa finalizada" : ui.inputPlaceholder}
               disabled={isLoading || isConversationFinished}
               className="flex-1 bg-transparent px-4 py-3 outline-none text-[#006A71] placeholder-gray-400 disabled:opacity-50 disabled:text-gray-400"
             />

@@ -4,32 +4,36 @@ import { Language } from "../types";
 
 let chatSession: Chat | null = null;
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getAIClient = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("API Key not found in environment variables.");
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 export const initializeChat = async (language: Language = 'pt', isRetryAttempt: boolean = false): Promise<string> => {
   try {
+    const ai = getAIClient();
     chatSession = ai.chats.create({
       model: 'gemini-3-flash-preview',
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         temperature: 0.7,
-        tools: [{googleSearch: {}}], // Enable Google Search Grounding
+        tools: [{googleSearch: {}}],
       },
     });
 
     let startPrompt = "";
 
     if (isRetryAttempt) {
-      // If the user has already finished a conversation on this device, we force the block message
       startPrompt = "SYSTEM COMMAND: BLOCK_RETRY";
     } else {
-      // Normal start - triggers Step 1
-      // Explicitly instructing the model to ask the "Arriving vs Receiving" question immediately
       startPrompt = language === 'pt' 
         ? "[INÍCIO DA SESSÃO] Dê as boas vindas. Apresente-se como Boba, uma guia cultural e 'Boba da Corte' (leve e divertida). IMPORTANTE: Já na primeira pergunta, questione se a pessoa está CHEGANDO na cidade (migrante/expat) ou se está RECEBENDO pessoas (anfitrião/local)."
         : language === 'en'
         ? "[SESSION START] Welcome the user. Introduce yourself as Boba, a cultural guide and 'Jester' (light and fun). IMPORTANT: In your very first question, ask if they are ARRIVING in the city (migrant/expat) or RECEIVING people (host/local)."
-        : "[INICIO DE SESIÓN] Da la bienvenida. Preséntate como Boba, una guía cultural y 'Bufona' (ligera y divertida). IMPORTANTE: En tu primera pregunta, cuestiona si la persona está LLEGANDO a la ciudad (migrante/expat) o RECIBIENDO personas (anfitrión/local).";
+        : "[INICIO DE SESIÓN] Da la bienvenida. Preséntate como Boba, una guía cultural y 'Bufona' (ligera y divertida). IMPORTANTE: En tu primera pergunta, cuestiona si la persona está LLEGANDO a la ciudad (migrante/expat) o RECIBIENDO personas (anfitrión/local).";
     }
 
     const response: GenerateContentResponse = await chatSession.sendMessage({
@@ -39,21 +43,17 @@ export const initializeChat = async (language: Language = 'pt', isRetryAttempt: 
     return response.text || "Olá! Eu sou a Boba. Você está chegando ou recebendo?";
   } catch (error) {
     console.error("Failed to initialize chat:", error);
-    if (error instanceof Error) {
-      console.error("Error details:", error.message);
-    }
-    return "Desculpe, erro de conexão. / Connection error.";
+    return "Desculpe, tive um pequeno tropeço na conexão. Pode tentar atualizar a página? / Connection error.";
   }
 };
 
 export const sendMessageToGemini = async (userMessage: string): Promise<string> => {
   if (!chatSession) {
-    // Attempt to reconnect if session is lost
     await initializeChat();
   }
 
   if (!chatSession) {
-    return "Connection error.";
+    return "Erro de conexão. Por favor, recarregue a página.";
   }
 
   try {
@@ -63,20 +63,14 @@ export const sendMessageToGemini = async (userMessage: string): Promise<string> 
 
     let finalText = response.text || "";
 
-    // Process Grounding (Search Results)
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     
     if (groundingChunks && groundingChunks.length > 0) {
       const uniqueUrls = new Set<string>();
-      
-      // Extract URLs from grounding chunks
       groundingChunks.forEach((chunk: any) => {
-        if (chunk.web?.uri) {
-          uniqueUrls.add(chunk.web.uri);
-        }
+        if (chunk.web?.uri) uniqueUrls.add(chunk.web.uri);
       });
 
-      // Append sources to the message text if found
       if (uniqueUrls.size > 0) {
         finalText += "\n\n**Fontes consultadas:**\n";
         uniqueUrls.forEach((url) => {
@@ -88,7 +82,7 @@ export const sendMessageToGemini = async (userMessage: string): Promise<string> 
     return finalText;
   } catch (error) {
     console.error("Error sending message:", error);
-    return "...";
+    return "Ops, me perdi um pouco na rede. Pode repetir?";
   }
 };
 

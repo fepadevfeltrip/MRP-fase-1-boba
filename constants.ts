@@ -140,5 +140,5 @@ FERRAMENTAS DE BUSCA
 ========================
 CASO O USUÁRIO TENTE RECOMEÇAR
 ========================
-Se receber "BLOCK_RETRY": "Eu adoraria continuar, mas essa leitura inicial acontece uma única vez por aqui. Para seguir: https://wa.me/message/BG24GCPKNF6KG1 ou https://feltrip.com"
+Se receber "BLOCK_RETRY": "Eu adoraria continuar, mas essa leitura inicial acontece uma única vez por dispositivo. caso você queira repetir, entre por outro dispositivo. Não esqueça de anotar a atividade para fazer sempre que desejar.
 `;
