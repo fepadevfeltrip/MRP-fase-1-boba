@@ -3,6 +3,8 @@ import { SYSTEM_INSTRUCTION } from "../constants";
 import { Language, UserLocation } from "../types";
 
 let chatSession: Chat | null = null;
+let currentLanguage: Language = 'pt';
+let lastUserLocation: UserLocation | undefined = undefined;
 
 const getAIClient = () => {
   const apiKey = process.env.API_KEY;
@@ -17,6 +19,9 @@ export const initializeChat = async (
   isRetryAttempt: boolean = false,
   userLocation?: UserLocation
 ): Promise<string> => {
+  currentLanguage = language;
+  lastUserLocation = userLocation;
+  
   try {
     const ai = getAIClient();
     chatSession = ai.chats.create({
@@ -30,9 +35,8 @@ export const initializeChat = async (
 
     let startPrompt = "";
     
-    // Construct location context string if available
     const locationContext = userLocation?.city && userLocation?.country_name
-      ? `\n[SISTEMA: O usuário está acessando de: ${userLocation.city}, ${userLocation.country_name}. Use isso para contextualizar a conversa, mas não precisa mencionar explicitamente o IP.]`
+      ? `\n[SISTEMA: O usuário está acessando de: ${userLocation.city}, ${userLocation.country_name}. Use isso para contextualizar a conversa.]`
       : "";
 
     if (isRetryAttempt) {
@@ -42,7 +46,7 @@ export const initializeChat = async (
         ? `[INÍCIO DA SESSÃO]${locationContext} Dê as boas vindas. Apresente-se como Boba, uma guia cultural e 'Boba da Corte' (leve e divertida). IMPORTANTE: Já na primeira pergunta, questione se a pessoa está CHEGANDO na cidade (migrante/expat) ou se está RECEBENDO pessoas (anfitrião/local).`
         : language === 'en'
         ? `[SESSION START]${locationContext} Welcome the user. Introduce yourself as Boba, a cultural guide and 'Jester' (light and fun). IMPORTANT: In your very first question, ask if they are ARRIVING in the city (migrant/expat) or RECEIVING people (host/local).`
-        : `[INICIO DE SESIÓN]${locationContext} Da la bienvenida. Preséntate como Boba, una guía cultural y 'Bufona' (ligera y divertida). IMPORTANTE: En tu primera pergunta, cuestiona si la persona está LLEGANDO a la ciudad (migrante/expat) o RECIBIENDO personas (anfitrión/local).`;
+        : `[INICIO DE SESIÓN]${locationContext} Da la bienvenida. Preséntate como Boba, una guía cultural y 'Bufona' (ligera y divertida). IMPORTANTE: En tu primera pergunta, cuestiona si la persona está LLEGANDO a la ciudad (migrante/expat) ou si está RECIBIENDO personas (anfitrión/local).`;
     }
 
     const response: GenerateContentResponse = await chatSession.sendMessage({
@@ -52,17 +56,23 @@ export const initializeChat = async (
     return response.text || "Olá! Eu sou a Boba. Você está chegando ou recebendo?";
   } catch (error) {
     console.error("Failed to initialize chat:", error);
-    return "Desculpe, tive um pequeno tropeço na conexão. Pode tentar atualizar a página? / Connection error.";
+    chatSession = null;
+    throw error;
   }
 };
 
 export const sendMessageToGemini = async (userMessage: string): Promise<string> => {
+  // Try to re-initialize if session is missing
   if (!chatSession) {
-    await initializeChat();
+    try {
+      await initializeChat(currentLanguage, false, lastUserLocation);
+    } catch (e) {
+      return "Estou com dificuldade de conexão. Pode tentar novamente em alguns segundos?";
+    }
   }
 
   if (!chatSession) {
-    return "Erro de conexão. Por favor, recarregue a página.";
+    return "Erro de conexão persistente. Por favor, recarregue a página.";
   }
 
   try {
@@ -91,18 +101,20 @@ export const sendMessageToGemini = async (userMessage: string): Promise<string> 
     return finalText;
   } catch (error) {
     console.error("Error sending message:", error);
-    return "Ops, me perdi um pouco na rede. Pode repetir?";
+    // If it's a model error or quota, it might recover on retry
+    return "Ops, tive um pequeno soluço digital aqui. Pode repetir sua última mensagem?";
   }
 };
 
 export const changeBotLanguage = async (language: Language): Promise<string> => {
+  currentLanguage = language;
   if (!chatSession) return "";
   
   const instruction = language === 'en' 
-    ? "SYSTEM: The user switched the app language to ENGLISH. Please immediately reply to the user in ENGLISH. Acknowledge the change naturally as Boba and invite them to continue the conversation." 
+    ? "SYSTEM: The user switched the app language to ENGLISH. Please immediately reply to the user in ENGLISH." 
     : language === 'es'
-    ? "SYSTEM: El usuario cambió el idioma de la app a ESPAÑOL. Por favor responde inmediatamente al usuario en ESPAÑOL. Reconoce el cambio naturalmente como Boba e invítalo a continuar la conversación."
-    : "SYSTEM: O usuário mudou o idioma do app para PORTUGUÊS. Por favor responda imediatamente ao usuário em PORTUGUÊS. Reconheça a mudança naturalmente como Boba e convide-o a continuar a conversa.";
+    ? "SYSTEM: El usuario cambió el idioma de la app a ESPAÑOL. Por favor responde inmediatamente al usuario en ESPAÑOL."
+    : "SYSTEM: O usuário mudou o idioma do app para PORTUGUÊS. Por favor responda imediatamente ao usuário em PORTUGUÊS.";
 
   try {
     const response = await chatSession.sendMessage({ message: instruction });

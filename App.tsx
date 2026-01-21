@@ -18,12 +18,11 @@ const App: React.FC = () => {
 
   const STORAGE_KEY = 'boba_conversation_completed_v1';
 
-  // Helper to safely access localStorage on mobile browsers
   const checkHasFinished = () => {
     try {
       return localStorage.getItem(STORAGE_KEY) === 'true';
     } catch (e) {
-      return false; // Fallback if storage is blocked
+      return false;
     }
   };
 
@@ -31,7 +30,6 @@ const App: React.FC = () => {
     try {
       localStorage.setItem(STORAGE_KEY, 'true');
     } catch (e) {
-      // Silently fail if storage is restricted
     }
   };
 
@@ -50,22 +48,25 @@ const App: React.FC = () => {
     const startConversation = async () => {
       const hasFinished = checkHasFinished();
       
-      // Attempt to fetch location for metrics/context
       let userLocation: UserLocation | undefined = undefined;
       try {
-        const res = await fetch('https://ipapi.co/json/');
+        // Add a 3s timeout to the geolocation fetch so it doesn't hang the app
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        
+        const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
         if (res.ok) {
            userLocation = await res.json();
-           console.log("📍 Location Detected:", userLocation?.city, userLocation?.country_name);
         }
       } catch (e) {
-        console.warn("Could not fetch location metrics.");
+        console.warn("Location fetch skipped or timed out.");
       }
       
       if (hasFinished) {
         setIsConversationFinished(true);
         try {
-          // Pass location even on block message if available
           const blockMessage = await initializeChat(language, true, userLocation);
           setMessages([{
             id: Date.now().toString(),
@@ -82,7 +83,6 @@ const App: React.FC = () => {
       }
 
       try {
-        // Initialize chat with location data
         const initialGreeting = await initializeChat(language, false, userLocation);
         const initialMessage: Message = {
           id: Date.now().toString(),
@@ -96,7 +96,7 @@ const App: React.FC = () => {
         setMessages([{
            id: 'error',
            role: Role.MODEL,
-           text: "Erro de conexão. Por favor, tente recarregar a página.",
+           text: "Tive um probleminha para carregar. Por favor, recarregue a página.",
            timestamp: Date.now()
         }]);
       } finally {
@@ -171,6 +171,12 @@ const App: React.FC = () => {
 
     } catch (err) {
       console.error(err);
+      setMessages((prev) => [...prev, {
+        id: 'err-' + Date.now(),
+        role: Role.MODEL,
+        text: "Ops! Minha conexão tropeçou. Pode tentar enviar de novo?",
+        timestamp: Date.now()
+      }]);
     } finally {
       setIsLoading(false);
     }
@@ -179,14 +185,12 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col h-screen bg-[#F8F8F4] relative overflow-hidden font-sans text-slate-800">
       
-      {/* Abstract Background Shapes */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-40 overflow-hidden">
           <div className="absolute top-[-5%] right-[-5%] w-[400px] h-[400px] bg-[#FF7D6B] rounded-full blur-[80px]"></div>
           <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#006A71] rounded-full blur-[100px] opacity-30"></div>
           <div className="absolute top-[40%] left-[20%] w-[200px] h-[200px] bg-[#EAA823] rounded-full blur-[90px] opacity-20"></div>
       </div>
 
-      {/* Header */}
       <header className="z-10 flex flex-col sm:flex-row items-center justify-between px-6 py-4 bg-[#F8F8F4]/90 backdrop-blur-md border-b border-[#EAA823]/20 sticky top-0 shadow-sm">
         <div className="flex items-center gap-3 mb-3 sm:mb-0">
           <div className="relative w-12 h-12 rounded-full border-2 border-[#FF007F] p-0.5 bg-white overflow-hidden shadow-md">
@@ -198,7 +202,6 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Language Switcher */}
         <div className="flex bg-white rounded-full p-1 border border-[#006A71]/20 shadow-sm">
           {(['pt', 'en', 'es'] as Language[]).map((lang) => (
             <button 
@@ -213,7 +216,6 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Chat Area */}
       <main className="flex-1 overflow-y-auto p-4 sm:p-6 z-10 scroll-smooth">
         <div className="max-w-3xl mx-auto flex flex-col min-h-full">
           {messages.map((msg) => (
@@ -230,7 +232,6 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Input Area */}
       <footer className="z-20 p-4 bg-[#F8F8F4]/95 backdrop-blur border-t border-[#006A71]/10">
         <div className="max-w-3xl mx-auto">
           <form 
