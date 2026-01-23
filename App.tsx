@@ -59,13 +59,11 @@ const App: React.FC = () => {
     const lower = text.toLowerCase();
     
     // Privacy First: Check for denial keywords first
-    // Matches: não, nao, no, nunca, jamais, recuso, discordo
     if (/\b(n(ã|a)o|no|nunca|jamais|recuso|discordo)\b/i.test(lower)) {
       return 'denied';
     }
 
     // Check for grant keywords
-    // Matches: sim, yes, si, claro, ok, pode, aceito, autorizo, concordo, tá, ta
     if (/\b(sim|yes|si|s|claro|ok|pode|aceito|autorizo|concordo|tá|ta)\b/i.test(lower)) {
       return 'granted';
     }
@@ -77,6 +75,7 @@ const App: React.FC = () => {
   useEffect(() => {
     // SECURITY CHECK: Data is ONLY saved if consentStatus is explicitly 'granted'
     if (messages.length > 0 && consentStatus === 'granted') {
+      console.log("[App] Consent granted. Syncing to Supabase...");
       saveConversation(
         sessionIdRef.current,
         messages,
