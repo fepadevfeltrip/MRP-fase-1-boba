@@ -9,7 +9,6 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 let supabase: any = null;
 
 try {
-  console.log(`[Supabase] Initializing client for ${SUPABASE_URL}`);
   supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 } catch (e) {
   console.error("[Supabase] Failed to initialize client:", e);
@@ -21,31 +20,47 @@ export const saveConversation = async (
   location?: UserLocation,
   language?: Language
 ) => {
-  if (!supabase) {
-    console.warn("[Supabase] Client not initialized, skipping save.");
-    return;
-  }
+  if (!supabase) return;
 
-  console.log(`[Supabase] Attempting to save conversation ${sessionId}...`);
+  // 1. Payload Completo (Ideal)
+  const fullPayload = {
+    id: sessionId,
+    messages: messages,
+    location: location || {},
+    language: language,
+    updated_at: new Date().toISOString()
+  };
 
   try {
-    const { data, error } = await supabase
+    // Tenta salvar tudo
+    const { error } = await supabase
       .from('conversations')
-      .upsert({
-        id: sessionId,
-        messages: messages,
-        location: location || {},
-        language: language,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'id' })
-      .select(); // .select() ajuda a confirmar se a escrita funcionou retornando o dado
+      .upsert(fullPayload, { onConflict: 'id' });
 
     if (error) {
-      console.error('[Supabase] ERROR saving conversation:', error.message, error.details);
+      console.warn('[Supabase] Full save failed (likely missing columns). Retrying minimal save...', error.message);
+
+      // 2. Payload Mínimo (Fallback)
+      // Se falhar, tenta salvar só o que vimos no print do usuário (id, messages, updated_at)
+      const minimalPayload = {
+        id: sessionId,
+        messages: messages,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error: retryError } = await supabase
+        .from('conversations')
+        .upsert(minimalPayload, { onConflict: 'id' });
+
+      if (retryError) {
+        console.error('[Supabase] Minimal save also failed. Likely RLS Policy missing.', retryError.message);
+      } else {
+        console.log('[Supabase] Minimal save success.');
+      }
     } else {
-      console.log('[Supabase] SUCCESS. Conversation saved.', data);
+      console.log('[Supabase] Full save success.');
     }
   } catch (err) {
-    console.error('[Supabase] UNEXPECTED ERROR:', err);
+    console.error('[Supabase] Unexpected error:', err);
   }
 };
