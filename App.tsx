@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Message, Role, Language, UserLocation } from './types';
 import { initializeChat, sendMessageToGemini, changeBotLanguage } from './services/geminiService';
+import { saveConversation } from './services/supabaseService';
 import { MessageBubble } from './components/MessageBubble';
 import { TypingIndicator } from './components/TypingIndicator';
 import { UI_STRINGS, BOBA_AVATAR_URL } from './constants';
@@ -12,8 +13,15 @@ const App: React.FC = () => {
   const [language, setLanguage] = useState<Language>('pt');
   const [isConversationFinished, setIsConversationFinished] = useState(false);
   
+  // Privacy State: 'pending' (default), 'granted' (user said yes), 'denied' (user said no)
+  const [consentStatus, setConsentStatus] = useState<'pending' | 'granted' | 'denied'>('pending');
+  
+  // Create a unique ID for this session
+  const sessionIdRef = useRef(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  
   const hasInitialized = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const userLocationRef = useRef<UserLocation | undefined>(undefined);
   const ui = UI_STRINGS[language];
 
   const STORAGE_KEY = 'boba_conversation_completed_v1';
@@ -33,13 +41,50 @@ const App: React.FC = () => {
     }
   };
 
+  const handleResetMemory = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      window.location.reload();
+    } catch (e) {
+      console.error("Failed to reset memory", e);
+    }
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Simple heuristic to detect consent in user text
+  const detectConsent = (text: string): 'granted' | 'denied' | 'pending' => {
+    const lower = text.toLowerCase();
+    
+    // Privacy First: Check for denial keywords first
+    // Matches: não, nao, no, nunca, jamais, recuso, discordo
+    if (/\b(n(ã|a)o|no|nunca|jamais|recuso|discordo)\b/i.test(lower)) {
+      return 'denied';
+    }
+
+    // Check for grant keywords
+    // Matches: sim, yes, si, claro, ok, pode, aceito, autorizo, concordo, tá, ta
+    if (/\b(sim|yes|si|s|claro|ok|pode|aceito|autorizo|concordo|tá|ta)\b/i.test(lower)) {
+      return 'granted';
+    }
+
+    return 'pending';
+  };
+
+  // Sync with Supabase ONLY if consent is GRANTED
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isLoading]);
+    // SECURITY CHECK: Data is ONLY saved if consentStatus is explicitly 'granted'
+    if (messages.length > 0 && consentStatus === 'granted') {
+      saveConversation(
+        sessionIdRef.current,
+        messages,
+        userLocationRef.current,
+        language
+      );
+    }
+  }, [messages, language, consentStatus]);
 
   useEffect(() => {
     if (hasInitialized.current) return;
@@ -50,7 +95,6 @@ const App: React.FC = () => {
       
       let userLocation: UserLocation | undefined = undefined;
       try {
-        // Add a 3s timeout to the geolocation fetch so it doesn't hang the app
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000);
         
@@ -59,6 +103,7 @@ const App: React.FC = () => {
         
         if (res.ok) {
            userLocation = await res.json();
+           userLocationRef.current = userLocation;
         }
       } catch (e) {
         console.warn("Location fetch skipped or timed out.");
@@ -147,6 +192,19 @@ const App: React.FC = () => {
     setInput('');
     setIsLoading(true);
 
+    // Update consent status if still pending
+    if (consentStatus === 'pending') {
+      const detected = detectConsent(userText);
+      if (detected !== 'pending') {
+        setConsentStatus(detected);
+        if (detected === 'denied') {
+          console.log("PRIVACY: User denied consent. Supabase sync disabled.");
+        } else {
+           console.log("PRIVACY: User granted consent. Supabase sync enabled.");
+        }
+      }
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
       role: Role.USER,
@@ -180,7 +238,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, isConversationFinished]);
+  }, [input, isLoading, isConversationFinished, consentStatus]);
 
   return (
     <div className="flex flex-col h-screen bg-[#F8F8F4] relative overflow-hidden font-sans text-slate-800">
@@ -260,6 +318,12 @@ const App: React.FC = () => {
           <p className="text-center text-xs text-[#006A71]/60 mt-2 font-medium">
             {ui.disclaimer}
           </p>
+          <button 
+            onClick={handleResetMemory}
+            className="block mx-auto mt-2 text-[10px] text-gray-300 hover:text-red-400 uppercase tracking-widest transition-colors"
+          >
+            Reset Memory (Dev)
+          </button>
         </div>
       </footer>
     </div>
