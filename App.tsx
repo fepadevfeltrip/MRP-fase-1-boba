@@ -63,8 +63,8 @@ const App: React.FC = () => {
       return 'denied';
     }
 
-    // Check for grant keywords
-    if (/\b(sim|yes|si|s|claro|ok|pode|aceito|autorizo|concordo|tá|ta)\b/i.test(lower)) {
+    // Check for grant keywords - expanded for "organic" flow
+    if (/\b(sim|yes|si|s|claro|ok|pode|aceito|autorizo|concordo|tá|ta|vamos|bora|beleza|fechou|vai)\b/i.test(lower)) {
       return 'granted';
     }
 

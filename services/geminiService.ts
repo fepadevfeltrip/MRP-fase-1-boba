@@ -42,34 +42,13 @@ export const initializeChat = async (
     if (isRetryAttempt) {
       startPrompt = "SYSTEM COMMAND: BLOCK_RETRY";
     } else {
-      // Prompt construction respecting the mandatory definition and flow
+      // Prompt simplificado para deixar a SYSTEM_INSTRUCTION guiar o fluxo organicamente
       if (language === 'pt') {
-        startPrompt = `[INÍCIO DA SESSÃO]${locationContext} Dê as boas vindas como Boba (leve e divertida).
-        OBRIGATÓRIO INCLUIR ESTA DEFINIÇÃO: "O Mapa da Presença Relacional é a métrica da Feltrip que identifica como uma pessoa está se adaptando culturalmente a um novo lugar ou recebendo algum estrangeiro - com foco nas relações e emoções."
-        
-        PERGUNTAS E AVISOS INICIAIS OBRIGATÓRIOS:
-        1. Pergunte se a pessoa autoriza que a equipe da Feltrip leia as respostas para melhoria do serviço.
-        2. Avise que você tem dados culturais aprofundados/hiperlocais para RIO DE JANEIRO e SÃO PAULO, mas apoia em qualquer lugar.
-        3. Pergunte se a pessoa está CHEGANDO na cidade (migrante/expat) ou se está RECEBENDO pessoas (anfitrião/local).
-           (NÃO pergunte o papel/função ainda, espere a resposta).`;
+        startPrompt = `[INÍCIO DA SESSÃO]${locationContext} Comece a conversa seguindo estritamente o PASSO 1 do seu Roteiro (Abertura, Definição do MRP e Solicitação de Permissão Orgânica).`;
       } else if (language === 'en') {
-        startPrompt = `[SESSION START]${locationContext} Welcome user as Boba (light and fun).
-        MANDATORY DEFINITION TO INCLUDE: "The Map of Relational Presence is Feltrip's metric that identifies how a person is culturally adapting to a new place or hosting a foreigner - focusing on relationships and emotions."
-        
-        MANDATORY INITIAL QUESTIONS AND NOTICES:
-        1. Ask if they authorize the Feltrip team to read the responses for service improvement.
-        2. Notice that you have deep/hyperlocal cultural data for RIO DE JANEIRO and SÃO PAULO, but you support anywhere.
-        3. Ask if they are ARRIVING in the city (migrant/expat) or RECEIVING people (host/local).
-           (DO NOT ask about their role yet, wait for the answer).`;
+        startPrompt = `[SESSION START]${locationContext} Start the conversation strictly following STEP 1 of your Script (Opening, MRP Definition, and Organic Permission Request).`;
       } else {
-        startPrompt = `[INICIO DE SESIÓN]${locationContext} Da la bienvenida como Boba (ligera y divertida).
-        DEFINICIÓN OBLIGATORIA A INCLUIR: "El Mapa de Presencia Relacional es la métrica de Feltrip que identifica cómo una persona se está adaptando culturalmente a un nuevo lugar o recibiendo a un extranjero - con foco en las relaciones y emociones."
-        
-        PREGUNTAS Y AVISOS INICIALES OBLIGATORIOS:
-        1. Pregunta si autorizan al equipo de Feltrip a leer las respuestas para mejorar el servicio.
-        2. Avisa que tienes datos culturales profundos/hiperlocales para RÍO DE JANEIRO y SÃO PAULO, pero apoyas en cualquier lugar.
-        3. Pregunta si está LLEGANDO a la ciudad (migrante/expat) o RECIBIENDO personas (anfitrión/local).
-           (NO preguntes su función todavía, espera la respuesta).`;
+        startPrompt = `[INICIO DE SESIÓN]${locationContext} Comienza la conversación siguiendo estrictamente el PASO 1 de tu Guion (Apertura, Definición del MRP y Solicitud de Permiso Orgánico).`;
       }
     }
 
@@ -77,7 +56,7 @@ export const initializeChat = async (
       message: startPrompt
     });
     
-    return response.text || "Olá! Eu sou a Boba. Você está chegando ou recebendo?";
+    return response.text || "Olá! Eu sou a Boba. Vamos mapear sua presença?";
   } catch (error) {
     console.error("Failed to initialize chat:", error);
     chatSession = null;
