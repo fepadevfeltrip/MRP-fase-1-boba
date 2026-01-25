@@ -42,13 +42,15 @@ export const initializeChat = async (
     if (isRetryAttempt) {
       startPrompt = "SYSTEM COMMAND: BLOCK_RETRY";
     } else {
-      // Prompt simplificado para deixar a SYSTEM_INSTRUCTION guiar o fluxo organicamente
+      // Texto exato solicitado
+      const welcomePT = `Oi! Sou a Boba, sua Boba da Corte que fala sobre tudo e a inteligência cultural e relacional da Feltrip.\n\nPara te entregar o mapa da mina em SP ou no Rio, eu processo nosso papo através da inteligência da Feltrip, tá? Vamos nessa.\n\nO Mapa da Presença Relacional é a nossa bússola para você não ser apenas mais um na multidão, mas sim o dono da sua própria travessia.\n\nComo posso te ajudar agora?\n\n1. Quero entender minha presença (Como estou me sentindo nesse movimento?)\n2. Quero um segredo da cidade (Onde está o ouro escondido hoje?)\n3. Estou Recebendo uma pessoa e quero dicas de hospitalidade.`;
+
       if (language === 'pt') {
-        startPrompt = `[INÍCIO DA SESSÃO]${locationContext} Comece a conversa seguindo estritamente o PASSO 1 do seu Roteiro (Abertura, Definição do MRP e Solicitação de Permissão Orgânica).`;
+        startPrompt = `[INÍCIO DA SESSÃO]${locationContext} Aja como Boba. Sua PRIMEIRA mensagem deve ser ESTRITAMENTE o texto abaixo. NÃO adicione saudações extras, NÃO mude a ordem, NÃO resuma. Reproduza exatamente:\n\n"${welcomePT}"`;
       } else if (language === 'en') {
-        startPrompt = `[SESSION START]${locationContext} Start the conversation strictly following STEP 1 of your Script (Opening, MRP Definition, and Organic Permission Request).`;
+        startPrompt = `[SESSION START]${locationContext} Act as Boba. Your FIRST message MUST BE the exact translation of the following text to English (Use "Map of Relational Presence (MRP)" for "Mapa da Presença Relacional"). Do not add anything else:\n\n"${welcomePT}"`;
       } else {
-        startPrompt = `[INICIO DE SESIÓN]${locationContext} Comienza la conversación siguiendo estrictamente el PASO 1 de tu Guion (Apertura, Definición del MRP y Solicitud de Permiso Orgánico).`;
+        startPrompt = `[INICIO DE SESIÓN]${locationContext} Actúa como Boba. Tu PRIMER mensaje DEBE SER la traducción exacta del siguiente texto al Español (Mantén "Map of Relational Presence (MRP)" si es relevante). No agregues nada más:\n\n"${welcomePT}"`;
       }
     }
 
@@ -83,25 +85,10 @@ export const sendMessageToGemini = async (userMessage: string): Promise<string> 
       message: userMessage
     });
 
-    let finalText = response.text || "";
-
-    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    // Retorna apenas o texto gerado pela IA.
+    // Fontes/Links (groundingChunks) foram omitidos propositalmente conforme solicitado.
+    return response.text || "";
     
-    if (groundingChunks && groundingChunks.length > 0) {
-      const uniqueUrls = new Set<string>();
-      groundingChunks.forEach((chunk: any) => {
-        if (chunk.web?.uri) uniqueUrls.add(chunk.web.uri);
-      });
-
-      if (uniqueUrls.size > 0) {
-        finalText += "\n\n**Fontes consultadas:**\n";
-        uniqueUrls.forEach((url) => {
-          finalText += `- ${url}\n`;
-        });
-      }
-    }
-
-    return finalText;
   } catch (error) {
     console.error("Error sending message:", error);
     // If it's a model error or quota, it might recover on retry

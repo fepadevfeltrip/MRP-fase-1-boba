@@ -13,7 +13,7 @@ const App: React.FC = () => {
   const [language, setLanguage] = useState<Language>('pt');
   const [isConversationFinished, setIsConversationFinished] = useState(false);
   
-  // Privacy State: 'pending' (default), 'granted' (user said yes), 'denied' (user said no)
+  // Privacy State: 'pending' (default - saves), 'granted' (saves), 'denied' (does not save)
   const [consentStatus, setConsentStatus] = useState<'pending' | 'granted' | 'denied'>('pending');
   
   // Create a unique ID for this session
@@ -54,16 +54,15 @@ const App: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Simple heuristic to detect consent in user text
+  // Simple heuristic to detect explicit denial
   const detectConsent = (text: string): 'granted' | 'denied' | 'pending' => {
     const lower = text.toLowerCase();
     
-    // Privacy First: Check for denial keywords first
-    if (/\b(n(ã|a)o|no|nunca|jamais|recuso|discordo)\b/i.test(lower)) {
+    // Check for denial keywords
+    if (/\b(n(ã|a)o|no|nunca|jamais|recuso|discordo|pare|stop)\b/i.test(lower)) {
       return 'denied';
     }
-
-    // Check for grant keywords - expanded for "organic" flow
+    // Check for explicit grant
     if (/\b(sim|yes|si|s|claro|ok|pode|aceito|autorizo|concordo|tá|ta|vamos|bora|beleza|fechou|vai)\b/i.test(lower)) {
       return 'granted';
     }
@@ -71,11 +70,13 @@ const App: React.FC = () => {
     return 'pending';
   };
 
-  // Sync with Supabase ONLY if consent is GRANTED
+  // Sync with Supabase
   useEffect(() => {
-    // SECURITY CHECK: Data is ONLY saved if consentStatus is explicitly 'granted'
-    if (messages.length > 0 && consentStatus === 'granted') {
-      console.log("[App] Consent granted. Syncing to Supabase...");
+    // SECURITY/PRIVACY UPDATE: 
+    // Save by default (Legitimate Interest/Beta Test) UNLESS explicitly denied.
+    // This fixes the issue where neutral conversations weren't being saved.
+    if (messages.length > 0 && consentStatus !== 'denied') {
+      console.log("[App] Syncing conversation to Supabase...");
       saveConversation(
         sessionIdRef.current,
         messages,
@@ -191,15 +192,13 @@ const App: React.FC = () => {
     setInput('');
     setIsLoading(true);
 
-    // Update consent status if still pending
+    // Update consent status based on user input
     if (consentStatus === 'pending') {
       const detected = detectConsent(userText);
       if (detected !== 'pending') {
         setConsentStatus(detected);
         if (detected === 'denied') {
           console.log("PRIVACY: User denied consent. Supabase sync disabled.");
-        } else {
-           console.log("PRIVACY: User granted consent. Supabase sync enabled.");
         }
       }
     }

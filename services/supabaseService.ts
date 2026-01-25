@@ -23,11 +23,12 @@ export const saveConversation = async (
   if (!supabase) return;
 
   // 1. Payload Completo (Ideal)
+  // Certifique-se de que a tabela 'conversations' (sua pasta) tem as colunas: id, messages, location, language, updated_at
   const fullPayload = {
     id: sessionId,
     messages: messages,
     location: location || {},
-    language: language,
+    language: language || 'pt',
     updated_at: new Date().toISOString()
   };
 
@@ -38,10 +39,10 @@ export const saveConversation = async (
       .upsert(fullPayload, { onConflict: 'id' });
 
     if (error) {
-      console.warn('[Supabase] Full save failed (likely missing columns). Retrying minimal save...', error.message);
+      console.warn('[Supabase] Full save failed. Retrying minimal save... Error:', error.message);
 
       // 2. Payload Mínimo (Fallback)
-      // Se falhar, tenta salvar só o que vimos no print do usuário (id, messages, updated_at)
+      // Se falhar (ex: coluna 'location' não existe), tenta salvar só o básico
       const minimalPayload = {
         id: sessionId,
         messages: messages,
@@ -53,7 +54,7 @@ export const saveConversation = async (
         .upsert(minimalPayload, { onConflict: 'id' });
 
       if (retryError) {
-        console.error('[Supabase] Minimal save also failed. Likely RLS Policy missing.', retryError.message);
+        console.error('[Supabase] Minimal save also failed. Check RLS Policies or Table Name.', retryError.message);
       } else {
         console.log('[Supabase] Minimal save success.');
       }
