@@ -24,7 +24,7 @@ const App: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [language, setLanguage] = useState<Language>('pt');
+  const [language, setLanguage] = useState<Language>('en'); // Changed default to 'en'
   const [isConversationFinished, setIsConversationFinished] = useState(false);
   
   // Create a unique ID for this session
@@ -60,7 +60,7 @@ const App: React.FC = () => {
       setIsAccessGranted(true);
       trackEvent('login_success', { method: 'access_code' });
     } else {
-      setAccessError('Código inválido ou expirado.');
+      setAccessError(ui.invalidCode); // Now uses dynamic language string
       trackEvent('login_failure', { input: accessCodeInput });
     }
     setIsVerifying(false);
@@ -189,6 +189,9 @@ const App: React.FC = () => {
     if (language === newLang || isLoading) return;
     
     setLanguage(newLang);
+    // If not logged in, just change state, don't call API
+    if (!isAccessGranted) return;
+
     setIsLoading(true);
     trackEvent('language_change', { from: language, to: newLang });
 
@@ -281,19 +284,33 @@ const App: React.FC = () => {
         </div>
 
         <div className="z-10 bg-white/80 backdrop-blur-lg p-8 rounded-3xl shadow-xl border border-[#006A71]/10 max-w-sm w-full text-center">
+          
+          {/* LOGIN LANGUAGE SELECTOR */}
+          <div className="flex justify-center gap-2 mb-6">
+            {(['pt', 'en', 'es'] as Language[]).map((lang) => (
+              <button 
+                key={lang}
+                onClick={() => setLanguage(lang)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold uppercase transition-all ${language === lang ? 'bg-[#006A71] text-white shadow' : 'text-gray-400 hover:text-[#006A71] border border-gray-200'}`}
+              >
+                {lang}
+              </button>
+            ))}
+          </div>
+
           <div className="w-20 h-20 rounded-full border-4 border-[#EAA823] p-1 bg-white overflow-hidden shadow-md mx-auto mb-6">
              <img src={BOBA_AVATAR_URL} alt="Boba" className="w-full h-full object-cover rounded-full" />
           </div>
           
-          <h1 className="text-2xl font-bold text-[#006A71] mb-2">Feltrip • Boba</h1>
-          <p className="text-gray-500 mb-6 text-sm">Insira seu código de convite para acessar a inteligência relacional.</p>
+          <h1 className="text-2xl font-bold text-[#006A71] mb-2">{ui.headerSubtitle}</h1>
+          <p className="text-gray-500 mb-6 text-sm">{ui.loginInstruction}</p>
 
           <form onSubmit={handleAccessSubmit} className="flex flex-col gap-4">
             <input
               type="text"
               value={accessCodeInput}
               onChange={(e) => setAccessCodeInput(e.target.value)}
-              placeholder="Código de acesso"
+              placeholder={ui.loginPlaceholder}
               className="px-4 py-3 rounded-xl border border-gray-200 focus:border-[#006A71] focus:ring-2 focus:ring-[#006A71]/20 outline-none transition-all text-center uppercase tracking-widest text-lg placeholder:text-gray-300 placeholder:normal-case placeholder:tracking-normal"
             />
             
@@ -306,7 +323,7 @@ const App: React.FC = () => {
               disabled={isVerifying || !accessCodeInput}
               className="bg-[#006A71] text-white font-bold py-3 rounded-xl hover:bg-[#00555a] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl active:scale-95"
             >
-              {isVerifying ? 'Verificando...' : 'Entrar'}
+              {isVerifying ? ui.verifying : ui.loginButton}
             </button>
           </form>
           

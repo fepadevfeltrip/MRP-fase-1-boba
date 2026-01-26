@@ -20,7 +20,13 @@ export const UI_STRINGS = {
     send: "Enviar",
     loading: "Conectando...",
     error: "Erro na conexão",
-    dataNotice: "Ao continuar, você concorda que os dados da conversa são processados pela Feltrip."
+    dataNotice: "Ao continuar, você concorda que os dados da conversa são processados pela Feltrip.",
+    // Login Screen
+    loginInstruction: "Insira seu código de convite para acessar a inteligência relacional.",
+    loginPlaceholder: "Código de acesso",
+    loginButton: "Entrar",
+    verifying: "Verificando...",
+    invalidCode: "Código inválido ou expirado."
   },
   en: {
     headerTitle: "Feltrip",
@@ -30,7 +36,13 @@ export const UI_STRINGS = {
     send: "Send",
     loading: "Connecting...",
     error: "Connection error",
-    dataNotice: "By continuing, you agree that conversation data is processed by Feltrip."
+    dataNotice: "By continuing, you agree that conversation data is processed by Feltrip.",
+    // Login Screen
+    loginInstruction: "Enter your invite code to access relational intelligence.",
+    loginPlaceholder: "Access code",
+    loginButton: "Enter",
+    verifying: "Verifying...",
+    invalidCode: "Invalid or expired code."
   },
   es: {
     headerTitle: "Feltrip",
@@ -40,7 +52,13 @@ export const UI_STRINGS = {
     send: "Enviar",
     loading: "Conectando...",
     error: "Error de conexión",
-    dataNotice: "Al continuar, aceptas que los datos de la conversación sean procesados por Feltrip."
+    dataNotice: "Al continuar, aceptas que los datos de la conversación sean procesados por Feltrip.",
+    // Login Screen
+    loginInstruction: "Ingresa tu código de invitación para acceder a la inteligencia relacional.",
+    loginPlaceholder: "Código de acceso",
+    loginButton: "Entrar",
+    verifying: "Verificando...",
+    invalidCode: "Código inválido o expirado."
   }
 };
 
