@@ -42,17 +42,17 @@ export const initializeChat = async (
     if (isRetryAttempt) {
       startPrompt = "SYSTEM COMMAND: BLOCK_RETRY";
     } else {
-      // Mensagens de boas-vindas atualizadas com AVISO DE DADOS
-      const welcomePT = `Oi! Sou a Boba, sua boba da corte moderna e a alma cultural da Feltrip.\n\n(Aviso: Nossas conversas são gravadas e processadas pela Feltrip para melhoria da experiência.)\n\nUsamos a metodologia Feltrip para navegar pela cidade e pelo seu próprio estado de ser. É sobre estar verdadeiramente presente, não apenas de passagem.\n\nQual caminho devemos seguir?\n\n1. Entender minha presença: (Como estou me movendo pelo mundo agora?)\n2. Um segredo da cidade: (Me mostre o 'ouro escondido' no Rio ou em São Paulo.)\n3. Hospitalidade: (Estou recebendo alguém e quero ser o guia definitivo.)`;
+      // Mensagens de boas-vindas limpas (Sem aviso de dados no corpo)
+      const welcomePT = `Oi! Sou a Boba, sua boba da corte moderna e a alma cultural da Feltrip.\n\nUsamos a metodologia Feltrip para navegar pela cidade e pelo seu próprio estado de ser. É sobre estar verdadeiramente presente, não apenas de passagem.\n\nQual caminho devemos seguir?\n\n1. Entender minha presença: (Como estou me movendo pelo mundo agora?)\n2. Um segredo da cidade: (Me mostre o 'ouro escondido' no Rio ou em São Paulo.)\n3. Hospitalidade: (Estou recebendo alguém e quero ser o guia definitivo.)`;
       
-      const welcomeEN = `I'm Boba, your modern-day jester and Feltrip’s cultural soul.\n\n(Notice: Our conversations are recorded and processed by Feltrip to improve the experience.)\n\nWe use the Feltrip methodology to navigate the city and your own state of being. It’s about being truly present, not just passing through.\n\nWhich path shall we take?\n\n1. Understand my presence: (How am I moving through the world right now?)\n2. A city secret: (Show me the 'hidden gold' in Rio or São Paulo.)\n3. Hospitality: (I’m hosting someone and want to be the ultimate guide.)`;
+      const welcomeEN = `I'm Boba, your modern-day jester and Feltrip’s cultural soul.\n\nWe use the Feltrip methodology to navigate the city and your own state of being. It’s about being truly present, not just passing through.\n\nWhich path shall we take?\n\n1. Understand my presence: (How am I moving through the world right now?)\n2. A city secret: (Show me the 'hidden gold' in Rio or São Paulo.)\n3. Hospitality: (I’m hosting someone and want to be the ultimate guide.)`;
 
       if (language === 'pt') {
         startPrompt = `[INÍCIO DA SESSÃO]${locationContext} Aja como Boba. Sua PRIMEIRA mensagem deve ser ESTRITAMENTE o texto abaixo. NÃO adicione saudações extras, NÃO mude a ordem, NÃO resuma. Reproduza exatamente:\n\n"${welcomePT}"`;
       } else if (language === 'en') {
         startPrompt = `[SESSION START]${locationContext} Act as Boba. Your FIRST message MUST BE EXACTLY the text below. Do not add anything else:\n\n"${welcomeEN}"`;
       } else {
-        startPrompt = `[INICIO DE SESIÓN]${locationContext} Actúa como Boba. Tu PRIMER mensaje DEBE SER la traducción exacta del siguiente texto al Español (Mantén "Map of Relational Presence (MRP)" si es relevante). Incluye el aviso de privacidad. No agregues nada más:\n\n"${welcomePT}"`;
+        startPrompt = `[INICIO DE SESIÓN]${locationContext} Actúa como Boba. Tu PRIMER mensaje DEBE SER la traducción exacta del siguiente texto al Español (Mantén "Map of Relational Presence (MRP)" si es relevante). No agregues nada más:\n\n"${welcomePT}"`;
       }
     }
 
