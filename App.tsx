@@ -311,7 +311,7 @@ const App: React.FC = () => {
               value={accessCodeInput}
               onChange={(e) => setAccessCodeInput(e.target.value)}
               placeholder={ui.loginPlaceholder}
-              className="px-4 py-3 rounded-xl border border-gray-200 focus:border-[#006A71] focus:ring-2 focus:ring-[#006A71]/20 outline-none transition-all text-center uppercase tracking-widest text-lg placeholder:text-gray-300 placeholder:normal-case placeholder:tracking-normal"
+              className="px-4 py-3 rounded-xl border border-gray-200 bg-white focus:border-[#006A71] focus:ring-2 focus:ring-[#006A71]/20 outline-none transition-all text-center uppercase tracking-widest text-lg placeholder:text-gray-300 placeholder:normal-case placeholder:tracking-normal"
             />
             
             {accessError && (

@@ -15,7 +15,8 @@ try {
 }
 
 export const verifyAccessCode = async (code: string): Promise<boolean> => {
-  const normalizedCode = code.trim();
+  // Normaliza para minúsculo para evitar problemas de Case Sensitivity (Ex: MEETINGSINRIO vs meetingsinrio)
+  const normalizedCode = code.trim().toLowerCase();
   
   // 1. Verificação Hardcoded (Backup imediato)
   if (normalizedCode === 'meetingsinrio') {
