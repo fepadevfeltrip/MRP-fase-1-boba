@@ -1,12 +1,19 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Message, Role, Language, UserLocation } from './types';
 import { initializeChat, sendMessageToGemini, changeBotLanguage } from './services/geminiService';
-import { saveConversation } from './services/supabaseService';
+import { saveConversation, verifyAccessCode } from './services/supabaseService';
 import { MessageBubble } from './components/MessageBubble';
 import { TypingIndicator } from './components/TypingIndicator';
 import { UI_STRINGS, BOBA_AVATAR_URL } from './constants';
 
 const App: React.FC = () => {
+  // Access Control State
+  const [isAccessGranted, setIsAccessGranted] = useState(false);
+  const [accessCodeInput, setAccessCodeInput] = useState('');
+  const [accessError, setAccessError] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  // Chat State
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -25,6 +32,34 @@ const App: React.FC = () => {
   const ui = UI_STRINGS[language];
 
   const STORAGE_KEY = 'boba_conversation_completed_v1';
+  const ACCESS_KEY = 'boba_access_granted_v1';
+
+  // --- ACCESS CONTROL LOGIC ---
+  useEffect(() => {
+    const hasAccess = localStorage.getItem(ACCESS_KEY);
+    if (hasAccess === 'true') {
+      setIsAccessGranted(true);
+    }
+  }, []);
+
+  const handleAccessSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accessCodeInput.trim()) return;
+
+    setIsVerifying(true);
+    setAccessError('');
+
+    const isValid = await verifyAccessCode(accessCodeInput);
+
+    if (isValid) {
+      localStorage.setItem(ACCESS_KEY, 'true');
+      setIsAccessGranted(true);
+    } else {
+      setAccessError('Código inválido ou expirado.');
+    }
+    setIsVerifying(false);
+  };
+  // ---------------------------
 
   const checkHasFinished = () => {
     try {
@@ -44,6 +79,7 @@ const App: React.FC = () => {
   const handleResetMemory = () => {
     try {
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(ACCESS_KEY); // Also reset access for testing
       window.location.reload();
     } catch (e) {
       console.error("Failed to reset memory", e);
@@ -87,7 +123,8 @@ const App: React.FC = () => {
   }, [messages, language, consentStatus]);
 
   useEffect(() => {
-    if (hasInitialized.current) return;
+    // Only initialize chat if access is granted
+    if (hasInitialized.current || !isAccessGranted) return;
     hasInitialized.current = true;
 
     const startConversation = async () => {
@@ -150,7 +187,7 @@ const App: React.FC = () => {
     };
 
     startConversation();
-  }, [language]);
+  }, [language, isAccessGranted]);
 
   const handleLanguageChange = async (newLang: Language) => {
     if (language === newLang || isLoading) return;
@@ -238,6 +275,54 @@ const App: React.FC = () => {
     }
   }, [input, isLoading, isConversationFinished, consentStatus]);
 
+  // RENDER: ACCESS GATEKEEPER
+  if (!isAccessGranted) {
+    return (
+      <div className="flex flex-col h-screen bg-[#F8F8F4] relative overflow-hidden font-sans text-slate-800 items-center justify-center p-6">
+        <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-40 overflow-hidden">
+          <div className="absolute top-[-5%] right-[-5%] w-[400px] h-[400px] bg-[#FF7D6B] rounded-full blur-[80px]"></div>
+          <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#006A71] rounded-full blur-[100px] opacity-30"></div>
+        </div>
+
+        <div className="z-10 bg-white/80 backdrop-blur-lg p-8 rounded-3xl shadow-xl border border-[#006A71]/10 max-w-sm w-full text-center">
+          <div className="w-20 h-20 rounded-full border-4 border-[#EAA823] p-1 bg-white overflow-hidden shadow-md mx-auto mb-6">
+             <img src={BOBA_AVATAR_URL} alt="Boba" className="w-full h-full object-cover rounded-full" />
+          </div>
+          
+          <h1 className="text-2xl font-bold text-[#006A71] mb-2">Feltrip • Boba</h1>
+          <p className="text-gray-500 mb-6 text-sm">Insira seu código de convite para acessar a inteligência relacional.</p>
+
+          <form onSubmit={handleAccessSubmit} className="flex flex-col gap-4">
+            <input
+              type="text"
+              value={accessCodeInput}
+              onChange={(e) => setAccessCodeInput(e.target.value)}
+              placeholder="Código de acesso"
+              className="px-4 py-3 rounded-xl border border-gray-200 focus:border-[#006A71] focus:ring-2 focus:ring-[#006A71]/20 outline-none transition-all text-center uppercase tracking-widest text-lg placeholder:text-gray-300 placeholder:normal-case placeholder:tracking-normal"
+            />
+            
+            {accessError && (
+              <p className="text-[#FF007F] text-xs font-semibold">{accessError}</p>
+            )}
+
+            <button
+              type="submit"
+              disabled={isVerifying || !accessCodeInput}
+              className="bg-[#006A71] text-white font-bold py-3 rounded-xl hover:bg-[#00555a] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl active:scale-95"
+            >
+              {isVerifying ? 'Verificando...' : 'Entrar'}
+            </button>
+          </form>
+          
+          <p className="mt-6 text-xs text-gray-400">
+            Acesso exclusivo para convidados.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // RENDER: MAIN APP (LOGGED IN)
   return (
     <div className="flex flex-col h-screen bg-[#F8F8F4] relative overflow-hidden font-sans text-slate-800">
       
@@ -320,7 +405,7 @@ const App: React.FC = () => {
             onClick={handleResetMemory}
             className="block mx-auto mt-2 text-[10px] text-gray-300 hover:text-red-400 uppercase tracking-widest transition-colors"
           >
-            Reset Memory (Dev)
+            Reset Memory & Access (Dev)
           </button>
         </div>
       </footer>

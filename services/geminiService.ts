@@ -42,14 +42,18 @@ export const initializeChat = async (
     if (isRetryAttempt) {
       startPrompt = "SYSTEM COMMAND: BLOCK_RETRY";
     } else {
-      // Texto exato solicitado
-      const welcomePT = `Oi! Sou a Boba, sua Boba da Corte que fala sobre tudo e a inteligência cultural e relacional da Feltrip.\n\nPara te entregar o mapa da mina em SP ou no Rio, eu processo nosso papo através da inteligência da Feltrip, tá? Vamos nessa.\n\nO Mapa da Presença Relacional é a nossa bússola para você não ser apenas mais um na multidão, mas sim o dono da sua própria travessia.\n\nComo posso te ajudar agora?\n\n1. Quero entender minha presença (Como estou me sentindo nesse movimento?)\n2. Quero um segredo da cidade (Onde está o ouro escondido hoje?)\n3. Estou Recebendo uma pessoa e quero dicas de hospitalidade.`;
+      // Mensagens de boas-vindas atualizadas conforme solicitação
+      const welcomePT = `Oi! Sou a Boba, sua boba da corte moderna e a alma cultural da Feltrip.\n\nUsamos a metodologia Feltrip para navegar pela cidade e pelo seu próprio estado de ser. É sobre estar verdadeiramente presente, não apenas de passagem.\n\nQual caminho devemos seguir?\n\n1. Entender minha presença: (Como estou me movendo pelo mundo agora?)\n2. Um segredo da cidade: (Me mostre o 'ouro escondido' no Rio ou em São Paulo.)\n3. Hospitalidade: (Estou recebendo alguém e quero ser o guia definitivo.)`;
+      
+      const welcomeEN = `I'm Boba, your modern-day jester and Feltrip’s cultural soul.\n\nWe use the Feltrip methodology to navigate the city and your own state of being. It’s about being truly present, not just passing through.\n\nWhich path shall we take?\n\n1. Understand my presence: (How am I moving through the world right now?)\n2. A city secret: (Show me the 'hidden gold' in Rio or São Paulo.)\n3. Hospitality: (I’m hosting someone and want to be the ultimate guide.)`;
 
       if (language === 'pt') {
         startPrompt = `[INÍCIO DA SESSÃO]${locationContext} Aja como Boba. Sua PRIMEIRA mensagem deve ser ESTRITAMENTE o texto abaixo. NÃO adicione saudações extras, NÃO mude a ordem, NÃO resuma. Reproduza exatamente:\n\n"${welcomePT}"`;
       } else if (language === 'en') {
-        startPrompt = `[SESSION START]${locationContext} Act as Boba. Your FIRST message MUST BE the exact translation of the following text to English (Use "Map of Relational Presence (MRP)" for "Mapa da Presença Relacional"). Do not add anything else:\n\n"${welcomePT}"`;
+        // Usa o texto em inglês fornecido explicitamente
+        startPrompt = `[SESSION START]${locationContext} Act as Boba. Your FIRST message MUST BE EXACTLY the text below. Do not add anything else:\n\n"${welcomeEN}"`;
       } else {
+        // Para Espanhol, pede a tradução do texto em Português
         startPrompt = `[INICIO DE SESIÓN]${locationContext} Actúa como Boba. Tu PRIMER mensaje DEBE SER la traducción exacta del siguiente texto al Español (Mantén "Map of Relational Presence (MRP)" si es relevante). No agregues nada más:\n\n"${welcomePT}"`;
       }
     }

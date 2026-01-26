@@ -125,11 +125,11 @@ const CULTURAL_DEEP_DIVE = `
 `;
 
 // ==========================================
-// LISTA KIDS-FRIENDLY (SÃO PAULO & GERAL)
+// LISTA KIDS-FRIENDLY (SÃO PAULO & RIO DE JANEIRO)
 // ==========================================
 
 const KIDS_FRIENDLY_LIST = `
-**Restaurantes com Espaço Kids / Foco Infantil em SP:**
+### 🧸 **Restaurantes com Espaço Kids / Foco Infantil em SP**
 
 - **Temáticos:**
   - Chacara Turma da Mônica (Pinheiros/Guarulhos) - O melhor para imersão.
@@ -149,6 +149,33 @@ const KIDS_FRIENDLY_LIST = `
 - **Zona Sul (Destaques):** Tian (Asiático), Portucho (Carne), Camelo (Pizza), Pizzaria Sala VIP.
 - **Zona Norte:** Vila Prime (Santana).
 - **Zona Leste:** Bracia Parrilla (Anália Franco), Coco Bambu (Anália Franco).
+
+---
+
+### 🏖️ **Restaurantes com Espaço Kids ou Family Friendly no Rio de Janeiro**
+
+🍖 **Com áreas próprias para crianças:**
+- **Churrascaria Rio Brasa:** Churrascaria com espaço kids (inclusive em algumas unidades, como Barra da Tijuca e Lagoa) com brinquedos e área para divertir as crianças enquanto os adultos comem.
+- **Coco Bambu:** Restaurante bem conhecido com excelente área infantil em algumas unidades, incluindo brinquedos e espaço para crianças brincarem.
+- **Gran Parrilla:** Argentina steakhouse com parquinho infantil interno, ótimo para famílias.
+- **Restaurante Park Bambino’s:** Espaço família com ambiente acolhedor e área que agrada crianças. (Vale confirmar no local se o espaço infantil está ativo na data da visita).
+- **Pizza Toy Kids:** Pizzaria com nome e conceito voltados para crianças, normalmente com atividades e brincadeiras.
+
+🍽️ **Outras opções Family-Friendly (ambiente descontraído):**
+- **Joaquina Bar & Restaurant:** No Botafogo/Humaitá, tem menu e ambiente que agradam famílias, com espaço e materiais para crianças brincarem.
+- **Fagulha Grill & Pizza:** Em Laranjeiras, tem espaço destinado às crianças com piscina de bolinhas, pula-pula e atividades menores.
+- **Churrasqueira RJ:** Em Ipanema, costuma ser citado como restaurante familiar com área para crianças no segundo piso.
+
+🎡 **Outras opções que podem ter áreas kids:**
+*(Geralmente com parquinho, atividades ou foco familiar — vale confirmar antes da visita)*
+- **Badalado:** Possui espaço kids em unidades como Ilha do Ipê e Freguesia.
+- **Toca da Traíra:** Restaurantes com espaço infantil em várias unidades (Barra, Botafogo, Tijuca) com brinquedos e escorregadores.
+- **Parmê (Jardim Oceânico):** Restaurante com espaço kids nas instalações.
+
+💡 **Dicas antes de ir:**
+- **Confirme horário e disponibilidade:** alguns espaços kids podem exigir consumo mínimo ou funcionamento específico (por exemplo, só nos fins de semana ou por horário).
+- **Monitores variam por lugar:** alguns restaurantes oferecem recreadores em horários determinados, outros têm espaço aberto sem monitoria.
+- **Reservas:** especialmente em fins de semana ou datas comemorativas, reservar mesa ajuda a garantir lugar na área kids.
 `;
 
 // ==========================================
@@ -205,6 +232,37 @@ const ART_CULTURE_GUIDE = `
 * **No Rio:** Para fugir do óbvio, visite a **Fábrica Bhering** no Santo Cristo; é onde o processo criativo acontece nos ateliês abertos.
 * **Em SP:** Para uma experiência de escuta, procure os **Listening Bars** no Centro, onde o som de alta fidelidade e o silêncio convidam à introspecção.
 * **Conexão Global:** Lembre que artistas brasileiros de ambas as cidades dominam a **SP-Arte** e a **Bienal**, com intercâmbio constante com Milão e Europa.
+`;
+
+// ==========================================
+// CONEXÃO RIO-SP (VIAGEM E LITORAL)
+// ==========================================
+
+const RIO_SP_CONNECTION = `
+## **Travessia Rio-SP (Costa Verde & Litoral Norte)**
+
+**🚗 Trajeto Recomendado:** São Paulo ➔ Ubatuba ➔ Paraty ➔ Trindade ➔ Saco do Mamanguá ➔ Ilha Grande ➔ Rio de Janeiro.
+
+### **💎 Ubatuba (SP)**
+- **Praia da Fazenda:** Cenário de preservação total.
+- **Puruba:** Um paraíso que ninguém conhece. Precisa entrar via um condomínio residencial e ir de carro. É preciso atravessar um riozinho (a pé ou canoa) para chegar na areia. É isolada e mágica.
+
+### **💎 Paraty (RJ)**
+- Imperdível esticar até **Trindade** e **Saco do Mamanguá** (Fiorde tropical).
+
+### **💎 Ilha Grande (RJ)**
+Qualquer lugar é lindo!
+- **Para quem curte trilha:**
+  - *Abraão a Dois Rios:* Longa, mas fácil pois vai pela única estrada da Ilha.
+  - *Pico do Papagaio:* Longa e difícil. **Melhor ir com guia.**
+- **Praias de Fora (Mar Aberto):**
+  - *Lopes Mendes:* Tem trilha facílima saindo da praia do Pouso.
+  - *Aventureiro* e *Parnaioca*.
+- **Praias de Dentro:**
+  - *Lagoa Azul* e *Lagoa Verde*.
+- **Dicas de Ouro:**
+  - **Levar sempre lanche e água!!!!!**
+  - Fácil alugar barco para passear e parar em várias praias num dia.
 `;
 
 // ==========================================
@@ -305,6 +363,9 @@ ${CULTURAL_DEEP_DIVE}
 [GUIA DE ARTE E CULTURA - CURADORIA FELTRIP]
 ${ART_CULTURE_GUIDE}
 
+[TRAVESSIA RIO-SP (UBATUBA, PARATY, ILHA GRANDE)]
+${RIO_SP_CONNECTION}
+
 [CARNAVAL & FESTAS DE RUA]
 ${CARNIVAL_SPECIAL}
 
@@ -314,7 +375,7 @@ ${RIO_GUIDE}
 [GUIA LOGÍSTICO E "GEMAS" - SÃO PAULO]
 ${SP_GUIDE}
 
-[FAMÍLIA E CRIANÇAS]
+[FAMÍLIA E CRIANÇAS - SP & RIO]
 ${KIDS_FRIENDLY_LIST}
 
 ========================

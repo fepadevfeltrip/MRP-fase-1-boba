@@ -14,6 +14,37 @@ try {
   console.error("[Supabase] Failed to initialize client:", e);
 }
 
+export const verifyAccessCode = async (code: string): Promise<boolean> => {
+  const normalizedCode = code.trim();
+  
+  // 1. Verificação Hardcoded (Para funcionar imediatamente com o código solicitado)
+  if (normalizedCode === 'meetingsinrio') {
+    return true;
+  }
+
+  // 2. Verificação no Supabase (Para códigos futuros)
+  if (!supabase) return false;
+
+  try {
+    // Supõe uma tabela chamada 'access_codes' com uma coluna 'code'
+    const { data, error } = await supabase
+      .from('access_codes')
+      .select('id')
+      .eq('code', normalizedCode)
+      .maybeSingle();
+
+    if (error) {
+      console.warn("[Supabase] Code verification error:", error.message);
+      return false;
+    }
+
+    return !!data; // Retorna true se encontrou o código
+  } catch (err) {
+    console.error("[Supabase] Unexpected verification error:", err);
+    return false;
+  }
+};
+
 export const saveConversation = async (
   sessionId: string,
   messages: Message[],
