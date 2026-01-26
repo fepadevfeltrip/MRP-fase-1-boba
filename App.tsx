@@ -6,6 +6,13 @@ import { MessageBubble } from './components/MessageBubble';
 import { TypingIndicator } from './components/TypingIndicator';
 import { UI_STRINGS, BOBA_AVATAR_URL } from './constants';
 
+// Helper para Google Analytics
+const trackEvent = (eventName: string, params?: Record<string, any>) => {
+  if (typeof window !== 'undefined' && (window as any).gtag) {
+    (window as any).gtag('event', eventName, params);
+  }
+};
+
 const App: React.FC = () => {
   // Access Control State
   const [isAccessGranted, setIsAccessGranted] = useState(false);
@@ -51,8 +58,10 @@ const App: React.FC = () => {
     if (isValid) {
       localStorage.setItem(ACCESS_KEY, 'true');
       setIsAccessGranted(true);
+      trackEvent('login_success', { method: 'access_code' });
     } else {
       setAccessError('Código inválido ou expirado.');
+      trackEvent('login_failure', { input: accessCodeInput });
     }
     setIsVerifying(false);
   };
@@ -77,6 +86,7 @@ const App: React.FC = () => {
     try {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(ACCESS_KEY); 
+      trackEvent('reset_memory');
       window.location.reload();
     } catch (e) {
       console.error("Failed to reset memory", e);
@@ -121,6 +131,11 @@ const App: React.FC = () => {
         if (res.ok) {
            userLocation = await res.json();
            userLocationRef.current = userLocation;
+           // Rastreia a localização aproximada do usuário no GA
+           trackEvent('user_location_detected', { 
+             city: userLocation.city, 
+             country: userLocation.country_name 
+           });
         }
       } catch (e) {
         console.warn("Location fetch skipped or timed out.");
@@ -153,6 +168,7 @@ const App: React.FC = () => {
           timestamp: Date.now(),
         };
         setMessages([initialMessage]);
+        trackEvent('session_start', { language });
       } catch (error) {
         console.error("Error starting chat", error);
         setMessages([{
@@ -174,6 +190,7 @@ const App: React.FC = () => {
     
     setLanguage(newLang);
     setIsLoading(true);
+    trackEvent('language_change', { from: language, to: newLang });
 
     try {
       const responseText = await changeBotLanguage(newLang);
@@ -198,6 +215,7 @@ const App: React.FC = () => {
     if (text.includes("wa.me/message/BG24GCPKNF6KG1")) {
       setFinishedInStorage();
       setIsConversationFinished(true);
+      trackEvent('conversation_completed', { sessionId: sessionIdRef.current });
     }
   };
 
@@ -217,6 +235,7 @@ const App: React.FC = () => {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    trackEvent('user_message_sent', { length: userText.length });
 
     try {
       const responseText = await sendMessageToGemini(userText);
@@ -229,10 +248,18 @@ const App: React.FC = () => {
       };
       
       setMessages((prev) => [...prev, botMessage]);
+      
+      // Rastreia sucesso da API
+      trackEvent('ai_response_received', { 
+        response_length: responseText.length,
+        language: language
+      });
+      
       checkConversationCompletion(responseText);
 
     } catch (err) {
       console.error(err);
+      trackEvent('ai_api_error');
       setMessages((prev) => [...prev, {
         id: 'err-' + Date.now(),
         role: Role.MODEL,
@@ -242,7 +269,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, isConversationFinished]);
+  }, [input, isLoading, isConversationFinished, language]);
 
   // RENDER: ACCESS GATEKEEPER
   if (!isAccessGranted) {
