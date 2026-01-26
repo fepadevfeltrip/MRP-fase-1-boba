@@ -16,28 +16,31 @@ export const UI_STRINGS = {
     headerTitle: "Feltrip",
     headerSubtitle: "Boba • Inteligência Relacional",
     inputPlaceholder: "Digite sua mensagem para Boba...",
-    disclaimer: "A Boba não substitui aconselhamento psicológico profissional.",
+    disclaimer: "As interações são processadas por IA para melhoria do serviço. A Boba não substitui aconselhamento psicológico.",
     send: "Enviar",
     loading: "Conectando...",
-    error: "Erro na conexão"
+    error: "Erro na conexão",
+    dataNotice: "Ao continuar, você concorda que os dados da conversa são processados pela Feltrip."
   },
   en: {
     headerTitle: "Feltrip",
     headerSubtitle: "Boba • Relational Intelligence",
     inputPlaceholder: "Type your message to Boba...",
-    disclaimer: "Boba does not replace professional psychological advice.",
+    disclaimer: "Interactions are AI-processed for service improvement. Boba does not replace professional advice.",
     send: "Send",
     loading: "Connecting...",
-    error: "Connection error"
+    error: "Connection error",
+    dataNotice: "By continuing, you agree that conversation data is processed by Feltrip."
   },
   es: {
     headerTitle: "Feltrip",
     headerSubtitle: "Boba • Inteligencia Relacional",
     inputPlaceholder: "Escribe tu mensaje a Boba...",
-    disclaimer: "Boba no sustituye el asesoramiento psicológico profesional.",
+    disclaimer: "Las interacciones son procesadas por IA. Boba no sustituye el consejo profesional.",
     send: "Enviar",
     loading: "Conectando...",
-    error: "Error de conexión"
+    error: "Error de conexión",
+    dataNotice: "Al continuar, aceptas que los datos de la conversación sean procesados por Feltrip."
   }
 };
 

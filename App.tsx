@@ -20,9 +20,6 @@ const App: React.FC = () => {
   const [language, setLanguage] = useState<Language>('pt');
   const [isConversationFinished, setIsConversationFinished] = useState(false);
   
-  // Privacy State: 'pending' (default - saves), 'granted' (saves), 'denied' (does not save)
-  const [consentStatus, setConsentStatus] = useState<'pending' | 'granted' | 'denied'>('pending');
-  
   // Create a unique ID for this session
   const sessionIdRef = useRef(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   
@@ -79,7 +76,7 @@ const App: React.FC = () => {
   const handleResetMemory = () => {
     try {
       localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(ACCESS_KEY); // Also reset access for testing
+      localStorage.removeItem(ACCESS_KEY); 
       window.location.reload();
     } catch (e) {
       console.error("Failed to reset memory", e);
@@ -90,29 +87,12 @@ const App: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Simple heuristic to detect explicit denial
-  const detectConsent = (text: string): 'granted' | 'denied' | 'pending' => {
-    const lower = text.toLowerCase();
-    
-    // Check for denial keywords
-    if (/\b(n(ã|a)o|no|nunca|jamais|recuso|discordo|pare|stop)\b/i.test(lower)) {
-      return 'denied';
-    }
-    // Check for explicit grant
-    if (/\b(sim|yes|si|s|claro|ok|pode|aceito|autorizo|concordo|tá|ta|vamos|bora|beleza|fechou|vai)\b/i.test(lower)) {
-      return 'granted';
-    }
-
-    return 'pending';
-  };
-
-  // Sync with Supabase
+  // Sync with Supabase (ALWAYS ON)
   useEffect(() => {
-    // SECURITY/PRIVACY UPDATE: 
-    // Save by default (Legitimate Interest/Beta Test) UNLESS explicitly denied.
-    // This fixes the issue where neutral conversations weren't being saved.
-    if (messages.length > 0 && consentStatus !== 'denied') {
-      console.log("[App] Syncing conversation to Supabase...");
+    // Agora salva sempre que houver mensagens, sem condicional de consentimento.
+    // O aviso de privacidade está explícito na mensagem de boas-vindas.
+    if (messages.length > 0) {
+      console.log("[App] Persisting conversation...");
       saveConversation(
         sessionIdRef.current,
         messages,
@@ -120,7 +100,7 @@ const App: React.FC = () => {
         language
       );
     }
-  }, [messages, language, consentStatus]);
+  }, [messages, language]);
 
   useEffect(() => {
     // Only initialize chat if access is granted
@@ -229,17 +209,6 @@ const App: React.FC = () => {
     setInput('');
     setIsLoading(true);
 
-    // Update consent status based on user input
-    if (consentStatus === 'pending') {
-      const detected = detectConsent(userText);
-      if (detected !== 'pending') {
-        setConsentStatus(detected);
-        if (detected === 'denied') {
-          console.log("PRIVACY: User denied consent. Supabase sync disabled.");
-        }
-      }
-    }
-
     const userMessage: Message = {
       id: Date.now().toString(),
       role: Role.USER,
@@ -273,7 +242,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, isConversationFinished, consentStatus]);
+  }, [input, isLoading, isConversationFinished]);
 
   // RENDER: ACCESS GATEKEEPER
   if (!isAccessGranted) {
@@ -314,8 +283,8 @@ const App: React.FC = () => {
             </button>
           </form>
           
-          <p className="mt-6 text-xs text-gray-400">
-            Acesso exclusivo para convidados.
+          <p className="mt-4 text-[10px] text-gray-400 leading-tight px-4">
+            {ui.dataNotice}
           </p>
         </div>
       </div>
@@ -398,12 +367,12 @@ const App: React.FC = () => {
               </svg>
             </button>
           </form>
-          <p className="text-center text-xs text-[#006A71]/60 mt-2 font-medium">
+          <p className="text-center text-[10px] text-[#006A71]/60 mt-2 font-medium">
             {ui.disclaimer}
           </p>
           <button 
             onClick={handleResetMemory}
-            className="block mx-auto mt-2 text-[10px] text-gray-300 hover:text-red-400 uppercase tracking-widest transition-colors"
+            className="block mx-auto mt-2 text-[8px] text-gray-300 hover:text-red-400 uppercase tracking-widest transition-colors"
           >
             Reset Memory & Access (Dev)
           </button>

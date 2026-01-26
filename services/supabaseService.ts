@@ -17,28 +17,36 @@ try {
 export const verifyAccessCode = async (code: string): Promise<boolean> => {
   const normalizedCode = code.trim();
   
-  // 1. Verificação Hardcoded (Para funcionar imediatamente com o código solicitado)
+  // 1. Verificação Hardcoded (Backup imediato)
   if (normalizedCode === 'meetingsinrio') {
     return true;
   }
 
-  // 2. Verificação no Supabase (Para códigos futuros)
+  // 2. Verificação no Supabase via RPC (Função Segura)
+  // Isso impede que alguém liste todos os códigos da tabela.
   if (!supabase) return false;
 
   try {
-    // Supõe uma tabela chamada 'access_codes' com uma coluna 'code'
-    const { data, error } = await supabase
-      .from('access_codes')
-      .select('id')
-      .eq('code', normalizedCode)
-      .maybeSingle();
+    // Chama a função 'verify_access_code' que criamos no SQL
+    const { data, error } = await supabase.rpc('verify_access_code', { 
+      input_code: normalizedCode 
+    });
 
     if (error) {
-      console.warn("[Supabase] Code verification error:", error.message);
-      return false;
+      // Se a função não existir no banco, tentamos o fallback antigo (menos seguro, mas funcional)
+      // apenas para não quebrar o app se o SQL não tiver sido rodado ainda.
+      console.warn("[Supabase] RPC error (SQL function might be missing), falling back to select:", error.message);
+      
+      const { data: tableData } = await supabase
+        .from('access_codes')
+        .select('code')
+        .eq('code', normalizedCode)
+        .maybeSingle();
+      
+      return !!tableData;
     }
 
-    return !!data; // Retorna true se encontrou o código
+    return !!data; // Retorna true se a função SQL retornou true
   } catch (err) {
     console.error("[Supabase] Unexpected verification error:", err);
     return false;
@@ -53,8 +61,6 @@ export const saveConversation = async (
 ) => {
   if (!supabase) return;
 
-  // 1. Payload Completo (Ideal)
-  // Certifique-se de que a tabela 'conversations' (sua pasta) tem as colunas: id, messages, location, language, updated_at
   const fullPayload = {
     id: sessionId,
     messages: messages,
@@ -64,35 +70,17 @@ export const saveConversation = async (
   };
 
   try {
-    // Tenta salvar tudo
+    // Tenta salvar usando UPSERT (Inserir ou Atualizar)
     const { error } = await supabase
       .from('conversations')
       .upsert(fullPayload, { onConflict: 'id' });
 
     if (error) {
-      console.warn('[Supabase] Full save failed. Retrying minimal save... Error:', error.message);
-
-      // 2. Payload Mínimo (Fallback)
-      // Se falhar (ex: coluna 'location' não existe), tenta salvar só o básico
-      const minimalPayload = {
-        id: sessionId,
-        messages: messages,
-        updated_at: new Date().toISOString()
-      };
-
-      const { error: retryError } = await supabase
-        .from('conversations')
-        .upsert(minimalPayload, { onConflict: 'id' });
-
-      if (retryError) {
-        console.error('[Supabase] Minimal save also failed. Check RLS Policies or Table Name.', retryError.message);
-      } else {
-        console.log('[Supabase] Minimal save success.');
-      }
+      console.error('[Supabase] Save failed. Check RLS policies.', error.message);
     } else {
-      console.log('[Supabase] Full save success.');
+      // Sucesso silencioso para não poluir o console
     }
   } catch (err) {
-    console.error('[Supabase] Unexpected error:', err);
+    console.error('[Supabase] Unexpected error during save:', err);
   }
 };
