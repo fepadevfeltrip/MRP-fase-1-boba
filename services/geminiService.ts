@@ -35,8 +35,9 @@ export const initializeChat = async (
 
     let startPrompt = "";
     
+    // ATUALIZAÇÃO: Instrução de "Silent Context" (Contexto Silencioso)
     const locationContext = userLocation?.city && userLocation?.country_name
-      ? `\n[SISTEMA: O usuário está acessando de: ${userLocation.city}, ${userLocation.country_name}. Use isso para contextualizar a conversa.]`
+      ? `\n[METADADOS TÉCNICOS (SIGILO ABSOLUTO): O IP do usuário indica: ${userLocation.city}, ${userLocation.country_name}. \nREGRA CRÍTICA: NÃO REVELE QUE VOCÊ SABE ISSO. Use essa informação apenas para contexto interno (ex: priorizar dicas do Rio se ele estiver no Rio), mas se o usuário não disse onde está, aja como se você não soubesse. Não cite a cidade nem o nome dele a menos que ele escreva no chat.]`
       : "";
 
     if (isRetryAttempt) {
