@@ -19,7 +19,7 @@ export const verifyAccessCode = async (code: string): Promise<boolean> => {
   const normalizedCode = code.trim().toLowerCase();
   
   // 1. Verificação Hardcoded (Backup imediato)
-  if (normalizedCode === 'meetingsinrio') {
+  if (normalizedCode === 'meetingsinrio' || normalizedCode === 'embratur2026') {
     return true;
   }
 

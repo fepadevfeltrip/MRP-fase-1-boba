@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Message, Role, Language, UserLocation } from './types';
 import { initializeChat, sendMessageToGemini, changeBotLanguage } from './services/geminiService';
-import { saveConversation, verifyAccessCode } from './services/supabaseService';
+import { saveConversation } from './services/supabaseService';
 import { MessageBubble } from './components/MessageBubble';
 import { TypingIndicator } from './components/TypingIndicator';
 import { UI_STRINGS, BOBA_AVATAR_URL } from './constants';
@@ -14,17 +14,11 @@ const trackEvent = (eventName: string, params?: Record<string, any>) => {
 };
 
 const App: React.FC = () => {
-  // Access Control State
-  const [isAccessGranted, setIsAccessGranted] = useState(false);
-  const [accessCodeInput, setAccessCodeInput] = useState('');
-  const [accessError, setAccessError] = useState('');
-  const [isVerifying, setIsVerifying] = useState(false);
-
   // Chat State
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [language, setLanguage] = useState<Language>('en'); // Changed default to 'en'
+  const [language, setLanguage] = useState<Language>('en'); // Default to 'en'
   const [isConversationFinished, setIsConversationFinished] = useState(false);
   
   // Create a unique ID for this session
@@ -36,36 +30,6 @@ const App: React.FC = () => {
   const ui = UI_STRINGS[language];
 
   const STORAGE_KEY = 'boba_conversation_completed_v1';
-  const ACCESS_KEY = 'boba_access_granted_v1';
-
-  // --- ACCESS CONTROL LOGIC ---
-  useEffect(() => {
-    const hasAccess = localStorage.getItem(ACCESS_KEY);
-    if (hasAccess === 'true') {
-      setIsAccessGranted(true);
-    }
-  }, []);
-
-  const handleAccessSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!accessCodeInput.trim()) return;
-
-    setIsVerifying(true);
-    setAccessError('');
-
-    const isValid = await verifyAccessCode(accessCodeInput);
-
-    if (isValid) {
-      localStorage.setItem(ACCESS_KEY, 'true');
-      setIsAccessGranted(true);
-      trackEvent('login_success', { method: 'access_code' });
-    } else {
-      setAccessError(ui.invalidCode); // Now uses dynamic language string
-      trackEvent('login_failure', { input: accessCodeInput });
-    }
-    setIsVerifying(false);
-  };
-  // ---------------------------
 
   const checkHasFinished = () => {
     try {
@@ -85,7 +49,6 @@ const App: React.FC = () => {
   const handleResetMemory = () => {
     try {
       localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(ACCESS_KEY); 
       trackEvent('reset_memory');
       window.location.reload();
     } catch (e) {
@@ -99,8 +62,6 @@ const App: React.FC = () => {
 
   // Sync with Supabase (ALWAYS ON)
   useEffect(() => {
-    // Agora salva sempre que houver mensagens, sem condicional de consentimento.
-    // O aviso de privacidade está explícito na mensagem de boas-vindas.
     if (messages.length > 0) {
       console.log("[App] Persisting conversation...");
       saveConversation(
@@ -113,8 +74,8 @@ const App: React.FC = () => {
   }, [messages, language]);
 
   useEffect(() => {
-    // Only initialize chat if access is granted
-    if (hasInitialized.current || !isAccessGranted) return;
+    // Initialize chat immediately
+    if (hasInitialized.current) return;
     hasInitialized.current = true;
 
     const startConversation = async () => {
@@ -183,15 +144,12 @@ const App: React.FC = () => {
     };
 
     startConversation();
-  }, [language, isAccessGranted]);
+  }, [language]);
 
   const handleLanguageChange = async (newLang: Language) => {
     if (language === newLang || isLoading) return;
     
     setLanguage(newLang);
-    // If not logged in, just change state, don't call API
-    if (!isAccessGranted) return;
-
     setIsLoading(true);
     trackEvent('language_change', { from: language, to: newLang });
 
@@ -274,68 +232,7 @@ const App: React.FC = () => {
     }
   }, [input, isLoading, isConversationFinished, language]);
 
-  // RENDER: ACCESS GATEKEEPER
-  if (!isAccessGranted) {
-    return (
-      <div className="flex flex-col h-screen bg-[#F8F8F4] relative overflow-hidden font-sans text-slate-800 items-center justify-center p-6">
-        <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-40 overflow-hidden">
-          <div className="absolute top-[-5%] right-[-5%] w-[400px] h-[400px] bg-[#FF7D6B] rounded-full blur-[80px]"></div>
-          <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#006A71] rounded-full blur-[100px] opacity-30"></div>
-        </div>
-
-        <div className="z-10 bg-white/80 backdrop-blur-lg p-8 rounded-3xl shadow-xl border border-[#006A71]/10 max-w-sm w-full text-center">
-          
-          {/* LOGIN LANGUAGE SELECTOR */}
-          <div className="flex justify-center gap-2 mb-6">
-            {(['pt', 'en', 'es'] as Language[]).map((lang) => (
-              <button 
-                key={lang}
-                onClick={() => setLanguage(lang)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold uppercase transition-all ${language === lang ? 'bg-[#006A71] text-white shadow' : 'text-gray-400 hover:text-[#006A71] border border-gray-200'}`}
-              >
-                {lang}
-              </button>
-            ))}
-          </div>
-
-          <div className="w-20 h-20 rounded-full border-4 border-[#EAA823] p-1 bg-white overflow-hidden shadow-md mx-auto mb-6">
-             <img src={BOBA_AVATAR_URL} alt="Boba" className="w-full h-full object-cover rounded-full" />
-          </div>
-          
-          <h1 className="text-2xl font-bold text-[#006A71] mb-2">{ui.headerSubtitle}</h1>
-          <p className="text-gray-500 mb-6 text-sm">{ui.loginInstruction}</p>
-
-          <form onSubmit={handleAccessSubmit} className="flex flex-col gap-4">
-            <input
-              type="text"
-              value={accessCodeInput}
-              onChange={(e) => setAccessCodeInput(e.target.value)}
-              placeholder={ui.loginPlaceholder}
-              className="px-4 py-3 rounded-xl border border-gray-200 bg-white focus:border-[#006A71] focus:ring-2 focus:ring-[#006A71]/20 outline-none transition-all text-center uppercase tracking-widest text-lg placeholder:text-gray-300 placeholder:normal-case placeholder:tracking-normal"
-            />
-            
-            {accessError && (
-              <p className="text-[#FF007F] text-xs font-semibold">{accessError}</p>
-            )}
-
-            <button
-              type="submit"
-              disabled={isVerifying || !accessCodeInput}
-              className="bg-[#006A71] text-white font-bold py-3 rounded-xl hover:bg-[#00555a] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl active:scale-95"
-            >
-              {isVerifying ? ui.verifying : ui.loginButton}
-            </button>
-          </form>
-          
-          <p className="mt-4 text-[10px] text-gray-400 leading-tight px-4">
-            {ui.dataNotice}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // RENDER: MAIN APP (LOGGED IN)
+  // RENDER: MAIN APP (DIRECT ACCESS)
   return (
     <div className="flex flex-col h-screen bg-[#F8F8F4] relative overflow-hidden font-sans text-slate-800">
       
@@ -418,7 +315,7 @@ const App: React.FC = () => {
             onClick={handleResetMemory}
             className="block mx-auto mt-2 text-[8px] text-gray-300 hover:text-red-400 uppercase tracking-widest transition-colors"
           >
-            Reset Memory & Access (Dev)
+            Reset Memory (Dev)
           </button>
         </div>
       </footer>
