@@ -81,66 +81,42 @@ const App: React.FC = () => {
     const startConversation = async () => {
       const hasFinished = checkHasFinished();
       
-      let userLocation: UserLocation | undefined = undefined;
-      
-      // Tentativa de obter localização com timeout curto (1.5s) para não travar em navegadores lentos (FB/Insta)
+      // 1. Tenta obter localização (Fail-safe total)
+      // Não bloqueia o app se falhar (comum no Facebook)
       try {
-        const controller = new AbortController();
-        // Reduzido para 1.5s para evitar que o navegador do Facebook dê timeout na página inteira
-        const timeoutId = setTimeout(() => controller.abort(), 1500); 
+        const fetchLocation = async () => {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 1000); // Timeout ultra-rápido de 1s
+            try {
+                const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (res.ok) return await res.json();
+            } catch (e) {
+                return undefined;
+            }
+        };
         
-        const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
-        clearTimeout(timeoutId);
-        
-        if (res.ok) {
-           userLocation = await res.json();
-           userLocationRef.current = userLocation;
-           trackEvent('user_location_detected', { 
-             city: userLocation.city, 
-             country: userLocation.country_name 
-           });
+        const loc = await fetchLocation();
+        if (loc) {
+            userLocationRef.current = loc;
+            trackEvent('user_location_detected', { city: loc.city });
         }
       } catch (e) {
-        // Falha silenciosa na localização para não impedir o chat
-        console.warn("Location fetch skipped or timed out (Facebook browser optimized).");
+        // Ignora qualquer erro de localização
       }
       
       if (hasFinished) {
         setIsConversationFinished(true);
-        try {
-          const blockMessage = await initializeChat(language, true, userLocation);
-          setMessages([{
-            id: Date.now().toString(),
-            role: Role.MODEL,
-            text: blockMessage,
-            timestamp: Date.now(),
-          }]);
-        } catch (e) {
-          console.error(e);
-        } finally {
-          setIsLoading(false);
-        }
+        // Tenta inicializar apenas para ter o objeto pronto, sem mostrar msg
+        try { await initializeChat(language, true, userLocationRef.current); } catch(e){}
+        setIsLoading(false);
         return;
       }
 
-      // Lógica de Inicialização com Retry (Resiliência para FB/Instagram)
-      const tryInitialize = async (attemptsLeft: number): Promise<string> => {
-        try {
-          return await initializeChat(language, false, userLocation);
-        } catch (error) {
-          if (attemptsLeft > 0) {
-            console.warn(`Init failed, retrying... (${attemptsLeft} left)`);
-            // Espera 1s antes de tentar de novo
-            await new Promise(r => setTimeout(r, 1000));
-            return tryInitialize(attemptsLeft - 1);
-          }
-          throw error;
-        }
-      };
-
+      // 2. Inicialização do Chat
+      // O initializeChat agora é "safe" e retorna um fallback se a API falhar.
       try {
-        // Tenta 2 vezes (1 inicial + 1 retry)
-        const initialGreeting = await tryInitialize(1);
+        const initialGreeting = await initializeChat(language, false, userLocationRef.current);
         
         const initialMessage: Message = {
           id: Date.now().toString(),
@@ -151,11 +127,13 @@ const App: React.FC = () => {
         setMessages([initialMessage]);
         trackEvent('session_start', { language });
       } catch (error) {
-        console.error("Error starting chat after retries", error);
+        // Esse bloco catch raramente será acionado agora, pois o service trata o erro.
+        // Mas se ocorrer algo catastrófico:
+        console.error("Error starting chat fatal:", error);
         setMessages([{
            id: 'error',
            role: Role.MODEL,
-           text: "Tive um probleminha para carregar (conexão instável). Por favor, recarregue a página.",
+           text: "Olá! Sou a Boba. (Modo offline/instável ativado). Se não conseguir responder, tente recarregar.",
            timestamp: Date.now()
         }]);
       } finally {
