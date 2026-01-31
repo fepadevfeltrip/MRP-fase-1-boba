@@ -140,12 +140,13 @@ export const sendMessageToGemini = async (userMessage: string): Promise<string> 
 };
 
 const getFacebookErrorMessage = () => {
+    // Mensagens ajustadas para soarem explicativas e confiáveis, citando a tecnologia Gemini
     if (currentLanguage === 'en') {
-        return "⚠️ **Browser Restriction Detected**\n\nThe Facebook/Instagram browser is blocking the connection. Please tap the **menu (•••)** and select **'Open in Browser'** (Chrome/Safari) to continue.";
+        return "🌱 **Let's move to a better space!**\n\nThe browser inside this app is limiting my connection to **Gemini AI**. I can't think clearly here.\n\n✨ **To fix this:** Tap the **three dots (•••)** at the top and select **'Open in Browser'** (Chrome/Safari). See you there!";
     } else if (currentLanguage === 'es') {
-        return "⚠️ **Restricción del Navegador**\n\nEl navegador de Facebook/Instagram está bloqueando la conexión. Por favor toca el **menú (•••)** y selecciona **'Abrir en el Navegador'** para continuar.";
+        return "🌱 **¡Vamos a un lugar mejor!**\n\nEl navegador dentro de esta app limita mi conexión con **Gemini AI**. No puedo pensar con claridad aquí.\n\n✨ **Solución:** Toca los **tres puntos (•••)** arriba y selecciona **'Abrir en el Navegador'**. ¡Te espero allí!";
     } else {
-        return "⚠️ **Bloqueio do Navegador Detectado**\n\nO navegador interno do Facebook/Instagram está bloqueando a inteligência da Boba.\n\n👉 **A solução:** Toque nos **3 pontinhos (•••)** no topo da tela e escolha **'Abrir no Navegador'** (Chrome ou Safari).";
+        return "🌱 **Vamos para um lugar melhor!**\n\nO navegador do Facebook/Instagram está limitando minha conexão com a **Gemini AI**. Não consigo pensar direito aqui.\n\n✨ **A solução:** Toque nos **3 pontinhos (•••)** no topo da tela e escolha **'Abrir no Navegador'** (Chrome ou Safari). Te espero lá!";
     }
 };
 
