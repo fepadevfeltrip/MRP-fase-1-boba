@@ -5,6 +5,7 @@ import { Language, UserLocation } from "../types";
 let chatSession: Chat | null = null;
 let currentLanguage: Language = 'pt';
 let lastUserLocation: UserLocation | undefined = undefined;
+let isFallbackMode = false; // Flag para saber se estamos rodando no modo "sem conexão inicial"
 
 const getAIClient = () => {
   const apiKey = process.env.API_KEY;
@@ -14,7 +15,7 @@ const getAIClient = () => {
   return new GoogleGenAI({ apiKey });
 };
 
-// Mensagens de boas-vindas "hardcoded" para fallback em caso de falha de rede
+// Mensagens de boas-vindas "hardcoded" para fallback
 const WELCOME_MESSAGES = {
   pt: `Oi! Sou a Boba, sua boba da corte moderna e alma cultural.\n\nQual caminho devemos seguir?\n\n1. Mapa das Emoções do Viajante: (Como estou me movendo pelo mundo agora?)\n2. Um segredo da cidade: (Me mostre o 'ouro escondido' no Rio ou em São Paulo.)\n3. Hospitalidade: (Estou recebendo alguém e quero ser o guia definitivo.)`,
   en: `I'm Boba, your modern-day jester and a cultural soul.\n\nIt’s about being truly present, not just passing through.\n\nWhich path shall we take?\n\n1. Traveler's Emotions Map: (How am I moving through the world right now?)\n2. A city secret: (Show me the 'hidden gold' in Rio or São Paulo.)\n3. Hospitality: (I’m hosting someone and want to be the ultimate guide.)`,
@@ -28,14 +29,13 @@ export const initializeChat = async (
 ): Promise<string> => {
   currentLanguage = language;
   lastUserLocation = userLocation;
+  isFallbackMode = false;
   
-  // Define a mensagem de boas-vindas padrão baseada no idioma
   const defaultWelcome = WELCOME_MESSAGES[language] || WELCOME_MESSAGES['pt'];
 
   try {
     const ai = getAIClient();
     
-    // Configura a sessão. Note que as System Instructions garantem a persona mesmo sem histórico.
     chatSession = ai.chats.create({
       model: 'gemini-3-flash-preview',
       config: {
@@ -47,78 +47,111 @@ export const initializeChat = async (
 
     let startPrompt = "";
     
-    // Contexto Silencioso de Localização
     const locationContext = userLocation?.city && userLocation?.country_name
-      ? `\n[METADADOS TÉCNICOS (SIGILO ABSOLUTO): O IP do usuário indica: ${userLocation.city}, ${userLocation.country_name}. \nREGRA CRÍTICA: NÃO REVELE QUE VOCÊ SABE ISSO. Use essa informação apenas para contexto interno.]`
+      ? `\n[METADADOS TÉCNICOS (SIGILO ABSOLUTO): O IP do usuário indica: ${userLocation.city}, ${userLocation.country_name}.]`
       : "";
 
     if (isRetryAttempt) {
       startPrompt = "SYSTEM COMMAND: BLOCK_RETRY";
     } else {
-      // Instrução para a IA repetir exatamente a mensagem de boas-vindas
       if (language === 'pt') {
-        startPrompt = `[INÍCIO DA SESSÃO]${locationContext} Aja como Boba. Sua PRIMEIRA mensagem deve ser ESTRITAMENTE o texto abaixo. NÃO adicione saudações extras. Reproduza exatamente:\n\n"${defaultWelcome}"`;
+        startPrompt = `[INÍCIO DA SESSÃO]${locationContext} Aja como Boba. Sua PRIMEIRA mensagem deve ser ESTRITAMENTE o texto abaixo:\n\n"${defaultWelcome}"`;
       } else if (language === 'en') {
-        startPrompt = `[SESSION START]${locationContext} Act as Boba. Your FIRST message MUST BE EXACTLY the text below:\n\n"${defaultWelcome}"`;
+        startPrompt = `[SESSION START]${locationContext} Act as Boba. Your FIRST message MUST BE EXACTLY:\n\n"${defaultWelcome}"`;
       } else {
-        startPrompt = `[INICIO DE SESIÓN]${locationContext} Actúa como Boba. Tu PRIMER mensaje DEBE SER la traducción exacta del siguiente texto al Español:\n\n"${defaultWelcome}"`;
+        startPrompt = `[INICIO DE SESIÓN]${locationContext} Actúa como Boba. Tu PRIMER mensaje DEBE SER exactamente:\n\n"${defaultWelcome}"`;
       }
     }
 
-    // Tenta enviar a mensagem para a API
     const response: GenerateContentResponse = await chatSession.sendMessage({
       message: startPrompt
     });
     
-    // Se a API retornar vazio, usa o fallback
     return response.text || defaultWelcome;
 
   } catch (error) {
-    // FALLBACK CRÍTICO:
-    // Se a conexão falhar (comum no Facebook Browser), NÃO jogue o erro.
-    // Retorne a mensagem hardcoded. A sessão existe (chatSession), mas talvez precise ser recriada no próximo envio.
-    console.warn("Failed to reach Gemini for welcome message (likely network restriction). Using fallback.", error);
-    
-    // Retorna a mensagem "local" para o usuário não ficar travado na tela de erro
+    console.warn("Failed to reach Gemini for welcome message (Network/Facebook Block). Using fallback.", error);
+    isFallbackMode = true; // Marca que a conexão real falhou e estamos usando o texto gravado
     return defaultWelcome;
   }
 };
 
 export const sendMessageToGemini = async (userMessage: string): Promise<string> => {
-  // Try to re-initialize if session is missing
+  // 1. Recuperação de Sessão Perdida ou Nula
   if (!chatSession) {
     try {
-      await initializeChat(currentLanguage, false, lastUserLocation);
+      // Tenta recriar a sessão silenciosamente
+      const ai = getAIClient();
+      chatSession = ai.chats.create({
+        model: 'gemini-3-flash-preview',
+        config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{googleSearch: {}}] },
+      });
+      isFallbackMode = true; // Se recriamos agora, perdemos o histórico anterior, então tratamos como fallback
     } catch (e) {
-      // Se falhar a reinicialização aqui, aí sim retornamos erro pro usuário
-      console.error("Critical connection failure", e);
-      return "Estou com dificuldade de conexão. Pode tentar novamente em alguns segundos?";
+      console.error("Critical: Could not recreate session object", e);
+      return getFacebookErrorMessage();
     }
   }
 
-  if (!chatSession) {
-    return "Erro de conexão persistente. Por favor, recarregue a página.";
-  }
-
   try {
+    let finalMessageToSend = userMessage;
+
+    // 2. Injeção de Contexto (Se a inicialização tinha falhado)
+    // Se estávamos no modo Fallback, a IA não sabe que "enviou" o menu de opções.
+    // O usuário vai mandar "1", e a IA vai pensar "1 o quê?".
+    // Aqui injetamos o contexto invisível para o usuário.
+    if (isFallbackMode) {
+      const welcomeContext = WELCOME_MESSAGES[currentLanguage] || WELCOME_MESSAGES['pt'];
+      finalMessageToSend = `[SISTEMA: A conexão anterior falhou. O usuário visualizou esta mensagem de boas-vindas: "${welcomeContext}".\n\nAgora, o usuário respondeu:]\n\n"${userMessage}"`;
+      
+      // Desliga o modo fallback pois agora já enviamos o contexto
+      isFallbackMode = false; 
+    }
+
     const response: GenerateContentResponse = await chatSession.sendMessage({
-      message: userMessage
+      message: finalMessageToSend
     });
 
     return response.text || "";
     
   } catch (error) {
     console.error("Error sending message:", error);
-    // Tenta recuperar a sessão silenciosamente para a próxima
-    chatSession = null;
-    return "Ops, tive um pequeno soluço digital aqui (instabilidade de rede). Pode repetir sua última mensagem?";
+    
+    // 3. TENTATIVA ÚNICA DE RECONEXÃO (Retry)
+    // Se falhar, tentamos recriar a sessão uma vez e reenviar
+    try {
+        console.log("Attempting one-time retry...");
+        const ai = getAIClient();
+        chatSession = ai.chats.create({
+            model: 'gemini-3-flash-preview',
+            config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{googleSearch: {}}] },
+        });
+        
+        // Reenvia com contexto reforçado
+        const retryMessage = `[SISTEMA: Houve uma queda de conexão. Recupere o contexto. O usuário disse:] ${userMessage}`;
+        const retryResponse = await chatSession.sendMessage({ message: retryMessage });
+        return retryResponse.text || "";
+    } catch (retryError) {
+        console.error("Retry failed:", retryError);
+        // Se falhar na segunda vez, é bloqueio definitivo do Facebook/Rede.
+        return getFacebookErrorMessage();
+    }
   }
+};
+
+const getFacebookErrorMessage = () => {
+    if (currentLanguage === 'en') {
+        return "⚠️ **Browser Restriction Detected**\n\nThe Facebook/Instagram browser is blocking the connection. Please tap the **menu (•••)** and select **'Open in Browser'** (Chrome/Safari) to continue.";
+    } else if (currentLanguage === 'es') {
+        return "⚠️ **Restricción del Navegador**\n\nEl navegador de Facebook/Instagram está bloqueando la conexión. Por favor toca el **menú (•••)** y selecciona **'Abrir en el Navegador'** para continuar.";
+    } else {
+        return "⚠️ **Bloqueio do Navegador Detectado**\n\nO navegador interno do Facebook/Instagram está bloqueando a inteligência da Boba.\n\n👉 **A solução:** Toque nos **3 pontinhos (•••)** no topo da tela e escolha **'Abrir no Navegador'** (Chrome ou Safari).";
+    }
 };
 
 export const changeBotLanguage = async (language: Language): Promise<string> => {
   currentLanguage = language;
   
-  // Mensagem de troca imediata "hardcoded" para evitar latência
   const switchMessage = language === 'en' 
       ? "Language switched to English. How can I help?" 
       : language === 'es'
@@ -127,17 +160,10 @@ export const changeBotLanguage = async (language: Language): Promise<string> => 
 
   if (!chatSession) return switchMessage;
   
-  const instruction = language === 'en' 
-    ? "SYSTEM: The user switched the app language to ENGLISH. Please immediately reply to the user in ENGLISH confirming the switch." 
-    : language === 'es'
-    ? "SYSTEM: El usuario cambió el idioma de la app a ESPAÑOL. Por favor responde inmediatamente al usuario en ESPAÑOL confirmando."
-    : "SYSTEM: O usuário mudou o idioma do app para PORTUGUÊS. Por favor responda imediatamente ao usuário em PORTUGUÊS confirmando.";
-
   try {
-    const response = await chatSession.sendMessage({ message: instruction });
+    const response = await chatSession.sendMessage({ message: `SYSTEM: Switch language to ${language}.` });
     return response.text || switchMessage;
   } catch (e) {
-    console.error("Failed to switch language context via API", e);
     return switchMessage;
   }
 };
