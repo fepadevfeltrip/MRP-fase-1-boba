@@ -44,9 +44,10 @@ export const initializeChat = async (
       startPrompt = "SYSTEM COMMAND: BLOCK_RETRY";
     } else {
       // Mensagens de boas-vindas limpas (Sem aviso de dados no corpo)
-      const welcomePT = `Oi! Sou a Boba, sua boba da corte moderna e alma cultural.\n\Qual caminho devemos seguir?\n\n1. Entender minha presença: (Como estou me movendo pelo mundo agora?)\n2. Um segredo da cidade: (Me mostre o 'ouro escondido' no Rio ou em São Paulo.)\n3. Hospitalidade: (Estou recebendo alguém e quero ser o guia definitivo.)`;
+      // Tópico 1 atualizado: "Mapa das Emoções do Viajante"
+      const welcomePT = `Oi! Sou a Boba, sua boba da corte moderna e alma cultural.\n\Qual caminho devemos seguir?\n\n1. Mapa das Emoções do Viajante: (Como estou me movendo pelo mundo agora?)\n2. Um segredo da cidade: (Me mostre o 'ouro escondido' no Rio ou em São Paulo.)\n3. Hospitalidade: (Estou recebendo alguém e quero ser o guia definitivo.)`;
       
-      const welcomeEN = `I'm Boba, your modern-day jester and a cultural soul.\n\It’s about being truly present, not just passing through.\n\nWhich path shall we take?\n\n1. Understand my presence: (How am I moving through the world right now?)\n2. A city secret: (Show me the 'hidden gold' in Rio or São Paulo.)\n3. Hospitality: (I’m hosting someone and want to be the ultimate guide.)`;
+      const welcomeEN = `I'm Boba, your modern-day jester and a cultural soul.\n\It’s about being truly present, not just passing through.\n\nWhich path shall we take?\n\n1. Traveler's Emotions Map: (How am I moving through the world right now?)\n2. A city secret: (Show me the 'hidden gold' in Rio or São Paulo.)\n3. Hospitality: (I’m hosting someone and want to be the ultimate guide.)`;
 
       if (language === 'pt') {
         startPrompt = `[INÍCIO DA SESSÃO]${locationContext} Aja como Boba. Sua PRIMEIRA mensagem deve ser ESTRITAMENTE o texto abaixo. NÃO adicione saudações extras, NÃO mude a ordem, NÃO resuma. Reproduza exatamente:\n\n"${welcomePT}"`;
