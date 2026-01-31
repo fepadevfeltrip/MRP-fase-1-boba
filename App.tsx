@@ -13,6 +13,22 @@ const trackEvent = (eventName: string, params?: Record<string, any>) => {
   }
 };
 
+// Helper para Gerar/Recuperar ID de Sessão Persistente
+// Isso garante que se o usuário der F5, a sessão continua a mesma no banco de dados.
+const getSessionId = () => {
+  try {
+    const stored = sessionStorage.getItem('boba_session_id');
+    if (stored) return stored;
+    
+    const newId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    sessionStorage.setItem('boba_session_id', newId);
+    return newId;
+  } catch (e) {
+    // Fallback caso sessionStorage esteja bloqueado (Navegação Privada restrita)
+    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+};
+
 const App: React.FC = () => {
   // Chat State
   const [messages, setMessages] = useState<Message[]>([]);
@@ -21,8 +37,8 @@ const App: React.FC = () => {
   const [language, setLanguage] = useState<Language>('pt'); // Default to 'pt' for Brazil context
   const [isConversationFinished, setIsConversationFinished] = useState(false);
   
-  // Create a unique ID for this session
-  const sessionIdRef = useRef(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  // Create a unique ID for this session (Persistent across reloads)
+  const sessionIdRef = useRef(getSessionId());
   
   const hasInitialized = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -31,7 +47,7 @@ const App: React.FC = () => {
 
   const STORAGE_KEY = 'boba_conversation_completed_v1';
 
-  // Logic to set finished state, but we don't block initialization based on it anymore
+  // Logic to set finished state
   const setFinishedInStorage = () => {
     try {
       localStorage.setItem(STORAGE_KEY, 'true');
@@ -42,6 +58,7 @@ const App: React.FC = () => {
   const handleResetMemory = () => {
     try {
       localStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem('boba_session_id'); // Limpa também a sessão atual
       trackEvent('reset_memory');
       window.location.reload();
     } catch (e) {
@@ -53,7 +70,7 @@ const App: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Sync with Supabase (ALWAYS ON)
+  // 1. Sync Normal (Sempre que mensagens mudam)
   useEffect(() => {
     if (messages.length > 0) {
       saveConversation(
@@ -65,14 +82,32 @@ const App: React.FC = () => {
     }
   }, [messages, language]);
 
+  // 2. Sync de Segurança (Quando usuário troca de aba/minimiza)
+  // CRÍTICO PARA PESQUISA: Garante que salva antes do browser fechar a conexão.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && messages.length > 0) {
+        saveConversation(
+          sessionIdRef.current,
+          messages,
+          userLocationRef.current,
+          language
+        );
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [messages, language]);
+
   useEffect(() => {
     // Initialize chat immediately
     if (hasInitialized.current) return;
     hasInitialized.current = true;
 
     const startConversation = async () => {
-      // Removed checkHasFinished blocking logic to ensure app always loads
-      // const hasFinished = checkHasFinished();
       
       // 1. Tenta obter localização (Fail-safe total)
       try {
