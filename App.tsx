@@ -18,7 +18,7 @@ const App: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [language, setLanguage] = useState<Language>('en'); // Default to 'en'
+  const [language, setLanguage] = useState<Language>('pt'); // Default to 'pt' for Brazil context
   const [isConversationFinished, setIsConversationFinished] = useState(false);
   
   // Create a unique ID for this session
@@ -31,14 +31,7 @@ const App: React.FC = () => {
 
   const STORAGE_KEY = 'boba_conversation_completed_v1';
 
-  const checkHasFinished = () => {
-    try {
-      return localStorage.getItem(STORAGE_KEY) === 'true';
-    } catch (e) {
-      return false;
-    }
-  };
-
+  // Logic to set finished state, but we don't block initialization based on it anymore
   const setFinishedInStorage = () => {
     try {
       localStorage.setItem(STORAGE_KEY, 'true');
@@ -63,7 +56,6 @@ const App: React.FC = () => {
   // Sync with Supabase (ALWAYS ON)
   useEffect(() => {
     if (messages.length > 0) {
-      console.log("[App] Persisting conversation...");
       saveConversation(
         sessionIdRef.current,
         messages,
@@ -79,10 +71,10 @@ const App: React.FC = () => {
     hasInitialized.current = true;
 
     const startConversation = async () => {
-      const hasFinished = checkHasFinished();
+      // Removed checkHasFinished blocking logic to ensure app always loads
+      // const hasFinished = checkHasFinished();
       
       // 1. Tenta obter localização (Fail-safe total)
-      // Não bloqueia o app se falhar (comum no Facebook)
       try {
         const fetchLocation = async () => {
             const controller = new AbortController();
@@ -104,17 +96,8 @@ const App: React.FC = () => {
       } catch (e) {
         // Ignora qualquer erro de localização
       }
-      
-      if (hasFinished) {
-        setIsConversationFinished(true);
-        // Tenta inicializar apenas para ter o objeto pronto, sem mostrar msg
-        try { await initializeChat(language, true, userLocationRef.current); } catch(e){}
-        setIsLoading(false);
-        return;
-      }
 
       // 2. Inicialização do Chat
-      // O initializeChat agora é "safe" e retorna um fallback se a API falhar.
       try {
         const initialGreeting = await initializeChat(language, false, userLocationRef.current);
         
@@ -127,8 +110,6 @@ const App: React.FC = () => {
         setMessages([initialMessage]);
         trackEvent('session_start', { language });
       } catch (error) {
-        // Esse bloco catch raramente será acionado agora, pois o service trata o erro.
-        // Mas se ocorrer algo catastrófico:
         console.error("Error starting chat fatal:", error);
         setMessages([{
            id: 'error',
@@ -208,13 +189,11 @@ const App: React.FC = () => {
       
       setMessages((prev) => [...prev, botMessage]);
       
-      // Rastreia sucesso da API
+      checkConversationCompletion(responseText);
       trackEvent('ai_response_received', { 
         response_length: responseText.length,
         language: language
       });
-      
-      checkConversationCompletion(responseText);
 
     } catch (err) {
       console.error(err);
@@ -230,7 +209,6 @@ const App: React.FC = () => {
     }
   }, [input, isLoading, isConversationFinished, language]);
 
-  // RENDER: MAIN APP (DIRECT ACCESS)
   return (
     <div className="flex flex-col h-screen bg-[#F8F8F4] relative overflow-hidden font-sans text-slate-800">
       
