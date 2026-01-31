@@ -14,7 +14,6 @@ const trackEvent = (eventName: string, params?: Record<string, any>) => {
 };
 
 // Helper para Gerar/Recuperar ID de Sessão Persistente
-// Isso garante que se o usuário der F5, a sessão continua a mesma no banco de dados.
 const getSessionId = () => {
   try {
     const stored = sessionStorage.getItem('boba_session_id');
@@ -24,7 +23,6 @@ const getSessionId = () => {
     sessionStorage.setItem('boba_session_id', newId);
     return newId;
   } catch (e) {
-    // Fallback caso sessionStorage esteja bloqueado (Navegação Privada restrita)
     return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 };
@@ -34,12 +32,12 @@ const App: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [language, setLanguage] = useState<Language>('pt'); // Default to 'pt' for Brazil context
+  const [language, setLanguage] = useState<Language>('pt'); 
   const [isConversationFinished, setIsConversationFinished] = useState(false);
   
-  // Create a unique ID for this session (Persistent across reloads)
+  // Refs para estado mutável (Solução para Event Listeners e Closures)
   const sessionIdRef = useRef(getSessionId());
-  
+  const messagesRef = useRef<Message[]>([]); // Ref mantém sempre a versão mais recente das mensagens
   const hasInitialized = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const userLocationRef = useRef<UserLocation | undefined>(undefined);
@@ -47,18 +45,21 @@ const App: React.FC = () => {
 
   const STORAGE_KEY = 'boba_conversation_completed_v1';
 
-  // Logic to set finished state
+  // Sincroniza o Ref com o State sempre que messages muda
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
   const setFinishedInStorage = () => {
     try {
       localStorage.setItem(STORAGE_KEY, 'true');
-    } catch (e) {
-    }
+    } catch (e) {}
   };
 
   const handleResetMemory = () => {
     try {
       localStorage.removeItem(STORAGE_KEY);
-      sessionStorage.removeItem('boba_session_id'); // Limpa também a sessão atual
+      sessionStorage.removeItem('boba_session_id');
       trackEvent('reset_memory');
       window.location.reload();
     } catch (e) {
@@ -66,11 +67,7 @@ const App: React.FC = () => {
     }
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  // 1. Sync Normal (Sempre que mensagens mudam)
+  // 1. Sync Normal (Via useEffect)
   useEffect(() => {
     if (messages.length > 0) {
       saveConversation(
@@ -82,14 +79,15 @@ const App: React.FC = () => {
     }
   }, [messages, language]);
 
-  // 2. Sync de Segurança (Quando usuário troca de aba/minimiza)
-  // CRÍTICO PARA PESQUISA: Garante que salva antes do browser fechar a conexão.
+  // 2. Sync de Segurança (Visibility Change)
+  // Agora usa messagesRef.current para garantir que não está pegando estado velho (stale closure)
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && messages.length > 0) {
+      if (document.visibilityState === 'hidden' && messagesRef.current.length > 0) {
+        // Força salvamento usando o valor atual do Ref
         saveConversation(
           sessionIdRef.current,
-          messages,
+          messagesRef.current,
           userLocationRef.current,
           language
         );
@@ -100,20 +98,18 @@ const App: React.FC = () => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [messages, language]);
+  }, [language]); // Dependência reduzida pois usamos Ref para messages
 
   useEffect(() => {
-    // Initialize chat immediately
     if (hasInitialized.current) return;
     hasInitialized.current = true;
 
     const startConversation = async () => {
-      
-      // 1. Tenta obter localização (Fail-safe total)
+      // 1. Tenta obter localização
       try {
         const fetchLocation = async () => {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 1000); // Timeout ultra-rápido de 1s
+            const timeoutId = setTimeout(() => controller.abort(), 1000); 
             try {
                 const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
                 clearTimeout(timeoutId);
@@ -128,9 +124,7 @@ const App: React.FC = () => {
             userLocationRef.current = loc;
             trackEvent('user_location_detected', { city: loc.city });
         }
-      } catch (e) {
-        // Ignora qualquer erro de localização
-      }
+      } catch (e) {}
 
       // 2. Inicialização do Chat
       try {
@@ -209,7 +203,18 @@ const App: React.FC = () => {
       timestamp: Date.now(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    // Atualização Otimista e Salvamento Imediato
+    // Construímos o novo array manualmente para salvar AGORA, sem esperar o ciclo do React
+    const newHistory = [...messages, userMessage];
+    
+    setMessages(newHistory);
+    // Atualiza o ref imediatamente para caso o usuário feche a aba durante o request da IA
+    messagesRef.current = newHistory; 
+    
+    // FORÇA O SALVAMENTO IMEDIATO DA MENSAGEM DO USUÁRIO
+    // Isso garante que se ele fechar a aba antes da IA responder, a pergunta dele foi salva.
+    saveConversation(sessionIdRef.current, newHistory, userLocationRef.current, language);
+
     trackEvent('user_message_sent', { length: userText.length });
 
     try {
@@ -242,7 +247,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, isConversationFinished, language]);
+  }, [input, isLoading, isConversationFinished, language, messages]);
 
   return (
     <div className="flex flex-col h-screen bg-[#F8F8F4] relative overflow-hidden font-sans text-slate-800">
