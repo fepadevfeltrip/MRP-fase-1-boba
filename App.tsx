@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Message, Role, Language, UserLocation } from './types';
 import { initializeChat, sendMessageToGemini, changeBotLanguage } from './services/geminiService';
-import { saveConversation } from './services/supabaseService';
+import { saveConversation, saveFeedback } from './services/supabaseService';
 import { MessageBubble } from './components/MessageBubble';
 import { TypingIndicator } from './components/TypingIndicator';
+import { FeedbackModal } from './components/FeedbackModal';
 import { UI_STRINGS, BOBA_AVATAR_URL } from './constants';
 
 // Helper para Google Analytics
@@ -35,6 +36,10 @@ const App: React.FC = () => {
   const [language, setLanguage] = useState<Language>('pt'); 
   const [isConversationFinished, setIsConversationFinished] = useState(false);
   
+  // Feedback State
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  
   // Refs para estado mutável (Solução para Event Listeners e Closures)
   const sessionIdRef = useRef(getSessionId());
   const messagesRef = useRef<Message[]>([]); // Ref mantém sempre a versão mais recente das mensagens
@@ -49,6 +54,17 @@ const App: React.FC = () => {
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
+
+  // Efeito para disparar o Modal de Feedback ao terminar a conversa
+  useEffect(() => {
+    if (isConversationFinished && !feedbackSubmitted) {
+      // Pequeno delay para a mensagem final ser lida antes do modal aparecer
+      const timer = setTimeout(() => {
+          setShowFeedback(true);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isConversationFinished, feedbackSubmitted]);
 
   const setFinishedInStorage = () => {
     try {
@@ -248,6 +264,14 @@ const App: React.FC = () => {
       setIsLoading(false);
     }
   }, [input, isLoading, isConversationFinished, language, messages]);
+  
+  // Handler para submissão do feedback
+  const handleFeedbackSubmit = async (rating: number, comment: string) => {
+    await saveFeedback(sessionIdRef.current, rating, comment);
+    setFeedbackSubmitted(true);
+    setShowFeedback(false);
+    trackEvent('feedback_submitted', { rating });
+  };
 
   return (
     <div className="flex flex-col h-screen bg-[#F8F8F4] relative overflow-hidden font-sans text-slate-800">
@@ -335,6 +359,14 @@ const App: React.FC = () => {
           </button>
         </div>
       </footer>
+      
+      {/* Modal de Feedback */}
+      <FeedbackModal 
+        isOpen={showFeedback} 
+        onClose={() => setShowFeedback(false)} 
+        onSubmit={handleFeedbackSubmit}
+        ui={ui}
+      />
     </div>
   );
 };

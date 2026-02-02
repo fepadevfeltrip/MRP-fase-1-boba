@@ -85,3 +85,22 @@ export const saveConversation = async (
     console.error('[Supabase] Unexpected error during save:', err);
   }
 };
+
+export const saveFeedback = async (sessionId: string, rating: number, comment: string) => {
+  if (!supabase) return;
+
+  try {
+    // Tenta inserir na tabela 'feedbacks'
+    const { error } = await supabase
+      .from('feedbacks')
+      .insert([
+        { session_id: sessionId, rating, comment, created_at: new Date().toISOString() }
+      ]);
+      
+    if (error) {
+        console.warn("[Supabase] Feedback insert failed (table might be missing?):", error.message);
+    }
+  } catch (err) {
+    console.error('[Supabase] Unexpected feedback error:', err);
+  }
+};

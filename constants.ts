@@ -1,3 +1,4 @@
+
 import { Language } from './types';
 
 // Usando o endpoint de thumbnail do Google Drive que é mais estável para embedar imagens (sz=s400 define o tamanho)
@@ -26,7 +27,13 @@ export const UI_STRINGS = {
     loginPlaceholder: "Código de acesso",
     loginButton: "Entrar",
     verifying: "Verificando...",
-    invalidCode: "Código inválido ou expirado."
+    invalidCode: "Código inválido ou expirado.",
+    // Feedback
+    feedbackTitle: "Como foi nossa conversa?",
+    feedbackPlaceholder: "Compartilhe o que sentiu (opcional)...",
+    submitFeedback: "Enviar Avaliação",
+    feedbackThanks: "Obrigada por compartilhar!",
+    skip: "Pular"
   },
   en: {
     headerTitle: "Feltrip",
@@ -42,7 +49,13 @@ export const UI_STRINGS = {
     loginPlaceholder: "Access code",
     loginButton: "Enter",
     verifying: "Verifying...",
-    invalidCode: "Invalid or expired code."
+    invalidCode: "Invalid or expired code.",
+    // Feedback
+    feedbackTitle: "How was our chat?",
+    feedbackPlaceholder: "Share your thoughts (optional)...",
+    submitFeedback: "Submit Feedback",
+    feedbackThanks: "Thank you for sharing!",
+    skip: "Skip"
   },
   es: {
     headerTitle: "Feltrip",
@@ -58,7 +71,13 @@ export const UI_STRINGS = {
     loginPlaceholder: "Código de acceso",
     loginButton: "Entrar",
     verifying: "Verificando...",
-    invalidCode: "Código inválido o expirado."
+    invalidCode: "Código inválido o expirado.",
+    // Feedback
+    feedbackTitle: "¿Qué tal nuestra charla?",
+    feedbackPlaceholder: "Comparte lo que sentiste (opcional)...",
+    submitFeedback: "Enviar Evaluación",
+    feedbackThanks: "¡Gracias por compartir!",
+    skip: "Saltar"
   }
 };
 
@@ -481,4 +500,3 @@ TEXTO FINAL PADRÃO (SÓ NO PASSO 5):
 👉 WhatsApp Feltrip: https://wa.me/message/BG24GCPKNF6KG1
 👉 Conheça nossa tecnologia social: https://feltrip.com
 Cuide da sua travessia."
-`;
