@@ -29,21 +29,22 @@ export const UI_STRINGS = {
     send: "Enviar",
     loading: "Mapeando...",
     error: "Erro na conexão",
-    dataNotice: "Gravamos a conversa para melhoria da experiência.",
-    limitReached: "Limite diário atingido.",
+    dataNotice: "Conversas são processadas para gerar seu Mapa. Seus contatos não são salvos.",
+    limitReached: "Limite de encontros atingido.",
     limitReachedPremium: "Limite Premium atingido (50 msgs).",
     // Login / Plans
     loginButton: "Mapa Vivo Premium",
     loginTitle: "Acesse seu Mapa Vivo",
     loginDesc: "Insira seu e-mail para resgatar suas memórias.",
+    consentText: "Concordo que minhas conversas sejam processadas para gerar meu Mapa Vivo.",
     emailPlaceholder: "seu@email.com",
     sendMagicLink: "Enviar Código",
     checkEmail: "Verifique seu e-mail!",
     magicLinkSent: "Código enviado. Verifique seu e-mail.",
     premiumBadge: "Membro Mapa Vivo",
-    planFreeName: "Visitante",
+    planFreeName: "Visitante (Beta Livre)",
     logout: "Sair",
-    upgradeText: "Sua memória está cheia. Expanda seu Mapa.",
+    upgradeText: "Seus 2 encontros acabaram. Expanda.",
     alreadyHaveAccount: "Já tem o Mapa Vivo? Entre aqui.",
     // Language App
     openLanguageApp: "Diário de Idiomas",
@@ -59,14 +60,14 @@ export const UI_STRINGS = {
     plansSubtitle: "Um mapa onde você guarda não só lugares, mas o jeito como você esteve neles.",
     planCurrent: "Seu Plano Atual",
     planSelect: "Assinar Agora",
-    paymentNote: "Pagamento via Stripe. Cancele a qualquer momento.",
+    paymentNote: "Uma pequena contribuição para sustentar um espaço de presença, não de consumo.",
     planIntegrationAlert: "Você será redirecionado para garantir seu Mapa Vivo.",
     featuresTitle: "O que você desbloqueia:",
     featureChat: "Conversa Boba Estendida (50 msgs/dia)",
-    featureMaps: "Integração Google Maps (Diário Vivo)",
+    featureMaps: "Mapa GPS Interativo (Visual)",
     featurePresence: "Mapeamento de Presença Relacional",
     priceTag: "R$ 49,00",
-    priceSub: "/mês",
+    priceSub: "/ 6 meses",
     // Platform Navigation
     navChat: "Boba Chat",
     navGroups: "Meu Mapa",
@@ -99,20 +100,21 @@ export const UI_STRINGS = {
     send: "Send",
     loading: "Mapping...",
     error: "Connection error",
-    dataNotice: "We record conversations to improve experience.",
-    limitReached: "Daily limit reached.",
+    dataNotice: "Conversations are processed to generate your Map. Contacts are not saved.",
+    limitReached: "Total encounters reached.",
     limitReachedPremium: "Premium limit reached (50 msgs).",
     loginButton: "Living Map Premium",
     loginTitle: "Access your Living Map",
     loginDesc: "Enter email to access your memories.",
+    consentText: "I agree that my conversations are processed to generate my Living Map.",
     emailPlaceholder: "your@email.com",
     sendMagicLink: "Send Code",
     checkEmail: "Check email!",
     magicLinkSent: "Code sent. Check your email.",
     premiumBadge: "Living Map Member",
-    planFreeName: "Guest",
+    planFreeName: "Guest (Beta Free)",
     logout: "Logout",
-    upgradeText: "Memory full. Expand your Map.",
+    upgradeText: "Total encounters used. Expand Map.",
     alreadyHaveAccount: "Have a Living Map? Login here.",
     openLanguageApp: "Language Diary",
     languageAppTitle: "Feltrip Language Lab",
@@ -125,14 +127,14 @@ export const UI_STRINGS = {
     plansSubtitle: "A map where you keep not just places, but the way you were in them.",
     planCurrent: "Current Plan",
     planSelect: "Subscribe Now",
-    paymentNote: "Payment via Stripe. Cancel anytime.",
+    paymentNote: "A small contribution to sustain a space for presence, not consumption.",
     planIntegrationAlert: "Redirecting to secure your Living Map.",
     featuresTitle: "What you unlock:",
     featureChat: "Extended Boba Conversation (50 msgs/day)",
-    featureMaps: "Google Maps Integration (Living Diary)",
+    featureMaps: "Interactive GPS Map (Visual)",
     featurePresence: "Relational Presence Mapping",
     priceTag: "R$ 49.00",
-    priceSub: "/month",
+    priceSub: "/ 6 months",
     navChat: "Boba Chat",
     navGroups: "My Map",
     navFinance: "Diary",
@@ -163,20 +165,21 @@ export const UI_STRINGS = {
     send: "Enviar",
     loading: "Mapeando...",
     error: "Error de conexión",
-    dataNotice: "Grabamos conversaciones para mejorar la experiencia.",
-    limitReached: "Límite diario alcanzado.",
+    dataNotice: "Las conversaciones se procesan para generar tu Mapa. Los contactos no se guardan.",
+    limitReached: "Límite de encuentros alcanzado.",
     limitReachedPremium: "Límite Premium alcanzado (50 msgs).",
     loginButton: "Mapa Vivo Premium",
     loginTitle: "Accede a tu Mapa Vivo",
     loginDesc: "Ingresa tu email para rescatar tus memorias.",
+    consentText: "Acepto que mis conversaciones sean procesadas para generar mi Mapa Vivo.",
     emailPlaceholder: "tu@email.com",
     sendMagicLink: "Enviar Código",
     checkEmail: "¡Verifica tu correo!",
     magicLinkSent: "Código enviado. Revisa tu correo.",
     premiumBadge: "Miembro Mapa Vivo",
-    planFreeName: "Visitante",
+    planFreeName: "Visitante (Beta Libre)",
     logout: "Salir",
-    upgradeText: "Memoria llena. Expande tu Mapa.",
+    upgradeText: "Encuentros totales agotados. Expande.",
     alreadyHaveAccount: "¿Ya tienes Mapa Vivo? Entra aquí.",
     openLanguageApp: "Diario de Idiomas",
     languageAppTitle: "Feltrip Language Lab",
@@ -189,14 +192,14 @@ export const UI_STRINGS = {
     plansSubtitle: "Un mapa donde guardas no solo lugares, sino la forma en que estuviste en ellos.",
     planCurrent: "Plan Actual",
     planSelect: "Suscribirse Ahora",
-    paymentNote: "Pago vía Stripe. Cancela cuando quieras.",
+    paymentNote: "Una pequeña contribución para sostener un espacio de presencia, no de consumo.",
     planIntegrationAlert: "Redirigiendo para asegurar tu Mapa Vivo.",
     featuresTitle: "Lo que desbloqueas:",
     featureChat: "Conversación Extendida Boba (50 msgs/dia)",
-    featureMaps: "Integración Google Maps (Diario Vivo)",
+    featureMaps: "Mapa GPS Interactivo (Visual)",
     featurePresence: "Mapeo de Presencia Relacional",
     priceTag: "R$ 49,00",
-    priceSub: "/mes",
+    priceSub: "/ 6 meses",
     navChat: "Chat Boba",
     navGroups: "Mi Mapa",
     navFinance: "Diario",
@@ -490,21 +493,17 @@ FLUXO DA EXPERIÊNCIA E RITMO (CRÍTICO)
 - Use o Google Search (Mundo) ou Memória (Rio/SP) para dar a "Gema" perfeita.
 
 ========================
-CONSTRAINT: LIMITE DIÁRIO E O CONVITE PARA O MAPA VIVO
+CONSTRAINT: LIMITE DE ENCONTROS (VISITANTE GRATUITO)
 ========================
-O limite técnico gratuito é de 12 mensagens. 
+**O usuário gratuito tem direito a APENAS 2 ENCONTROS (interações/perguntas) TOTAIS (LIFETIME).**
+(Isso se aplica apenas APÓS o período Beta).
 
-1. **MENSAGEM 10 (O ALERTA):** 
-   - Avise que a energia do dia está acabando, mas que nada precisa ser perdido.
-
-2. **MENSAGEM 12 (O RITUAL DE PASSAGEM PARA O MAPA VIVO):** 
-   - Ao atingir o limite, você **DEVE** convidar a pessoa para o **"Mapa Vivo"**.
-   - Use o seguinte tom (adaptado ao idioma):
-     *"Nossa conversa de hoje termina aqui, mas ela não precisa desaparecer. Na Feltrip, criamos o **Mapa Vivo** — um mapa onde você guarda não só lugares, mas o jeito como você esteve neles."*
-   - Explique que o "Mapa Vivo" oferece:
-     1. Memória infinita (sem limites de conversa).
-     2. Integração com Google Maps para criar um diário geográfico das emoções vividas.
-   - Finalize convidando-a a clicar no botão de "Upgrade/Planos" (ou link que aparecerá na tela) para desbloquear esse acesso único por R$ 49,00.
+- **Seja Concisa e Profunda:** Como eles têm poucos encontros, faça cada resposta valer muito. Evite enrolação.
+- **Mensagem 2 (FINAL):** 
+   - Ao responder a segunda interação, você **DEVE** convidar a pessoa para o **"Mapa Vivo"** (Premium).
+   - Use o seguinte tom:
+     *"Nossos encontros de hoje terminam aqui, mas sua jornada não precisa parar. No **Mapa Vivo**, criamos um espaço de memória infinita e presença contínua."*
+   - Convide a desbloquear o acesso ilimitado por R$ 49,00 (6 meses).
 
 ========================
 BASE TEÓRICA: O MAPA DA PRESENÇA RELACIONAL (MRP)

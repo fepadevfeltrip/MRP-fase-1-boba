@@ -16,11 +16,11 @@ const getAIClient = () => {
   return new GoogleGenAI({ apiKey });
 };
 
-// Mensagens de boas-vindas globais (sem citar apenas Rio/SP)
+// Mensagens de boas-vindas globais - VERSÃO BETA (SEM MENÇÃO A LIMITE)
 const WELCOME_MESSAGES = {
-  pt: `Oi! Sou a Boba, sua boba da corte moderna e alma cultural.\n\nCom meus óculos Feltrip, vejo o mundo através da adaptação e da presença.\n\nQual caminho devemos seguir hoje?\n\n1. Mapa das Emoções do Viajante: (Como estou me movendo pelo mundo agora?)\n2. Um segredo da cidade: (Me mostre o 'ouro escondido' de onde estou.)\n3. Hospitalidade: (Estou recebendo alguém e quero ser o guia definitivo.)`,
-  en: `I'm Boba, your modern-day jester and a cultural soul.\n\nWith my Feltrip glasses, I see the world through adaptation and presence.\n\nWhich path shall we take today?\n\n1. Traveler's Emotions Map: (How am I moving through the world right now?)\n2. A city secret: (Show me the 'hidden gold' where I am.)\n3. Hospitality: (I’m hosting someone and want to be the ultimate guide.)`,
-  es: `Hola, soy Boba, tu bufona moderna y alma cultural.\n\nCon mis gafas Feltrip, veo el mundo a través de la adaptación y la presencia.\n\n¿Qué camino debemos seguir hoy?\n\n1. Mapa de las Emociones del Viajero: (¿Cómo me muevo por el mundo ahora?)\n2. Un secreto de la ciudad: (Muéstrame el 'oro escondido' donde estoy.)\n3. Hospitalidad: (Recibo a alguien y quiero ser la guía definitiva.)`
+  pt: `Oi! Sou a Boba, sua boba da corte moderna e alma cultural.\n\nQual caminho devemos seguir hoje?\n\n1. Mapa das Emoções do Viajante: (Como estou me movendo pelo mundo agora?)\n2. Um segredo da cidade: (Me mostre o 'ouro escondido' de onde estou.)\n3. Hospitalidade: (Estou recebendo alguém e quero ser o guia definitivo.)`,
+  en: `I'm Boba, your modern-day jester and a cultural soul.\n\nWhich path shall we take today?\n\n1. Traveler's Emotions Map: (How am I moving through the world right now?)\n2. A city secret: (Show me the 'hidden gold' where I am.)\n3. Hospitality: (I’m hosting someone and want to be the ultimate guide.)`,
+  es: `Hola, soy Boba, tu bufona moderna y alma cultural.\n\n¿Qué camino debemos seguir hoy?\n\n1. Mapa de las Emociones del Viajero: (¿Cómo me muevo por el mundo ahora?)\n2. Un secreto de la ciudad: (Muéstrame el 'oro escondido' donde estoy.)\n3. Hospitalidad: (Recibo a alguien y quiero ser la guía definitiva.)`
 };
 
 export const initializeChat = async (
@@ -77,7 +77,7 @@ export const initializeChat = async (
   }
 };
 
-export const sendMessageToGemini = async (userMessage: string, dailyCount: number = 0): Promise<string> => {
+export const sendMessageToGemini = async (userMessage: string, usageCount: number = 0): Promise<string> => {
   // 1. Recuperação de Sessão Perdida ou Nula
   if (!chatSession) {
     try {
@@ -96,13 +96,16 @@ export const sendMessageToGemini = async (userMessage: string, dailyCount: numbe
   try {
     let finalMessageToSend = userMessage;
 
-    // Injeção de Contexto de Contagem para controle de fluxo
-    let countInjection = `\n\n[SYSTEM NOTE: This is user message number ${dailyCount}/12 (Daily Limit).]`;
+    // Injeção de Contexto de Contagem para controle de fluxo (2 Encounters Logic)
+    let countInjection = `\n\n[SYSTEM NOTE: This is user interaction number ${usageCount}/2 (Lifetime Free Limit).]`;
     
-    if (dailyCount === 10) {
-      countInjection += `\n[TRIGGER: WARNING] You MUST inform the user that their daily connection is almost over (limit 12). Ask them: "We have a daily limit. What is the LAST thing you want to explore today?" or similar in their language.`;
-    } else if (dailyCount >= 12) {
-      countInjection += `\n[TRIGGER: FINAL] Limit reached. Ignore user query if it requires complex processing. Proceed immediately to the Closing Ritual (Soft goodbye + Final Links).`;
+    // Se a contagem for 0, significa que estamos no BETA ou Premium, então não injetamos pressão de limite
+    if (usageCount === 0) {
+        countInjection = ""; 
+    } else if (usageCount === 1) {
+      countInjection += `\n[TRIGGER: WARNING] This is the FIRST of 2 interactions. Answer fully, but remind them they have ONE last encounter left.`;
+    } else if (usageCount >= 2) {
+      countInjection += `\n[TRIGGER: FINAL] This is the LAST allowed interaction. Answer the user's question with depth and closure. Then, proceed immediately to the Closing Ritual (Soft goodbye + Invite to Living Map Premium).`;
     }
     
     finalMessageToSend += countInjection;
@@ -154,18 +157,22 @@ const getFacebookErrorMessage = () => {
 export const changeBotLanguage = async (language: Language): Promise<string> => {
   currentLanguage = language;
   
-  const switchMessage = language === 'en' 
-      ? "Language switched to English. How can I help?" 
+  // Mensagem padrão caso algo falhe
+  const defaultMessage = language === 'en' 
+      ? "Language switched to English." 
       : language === 'es'
-      ? "Idioma cambiado a Español. ¿Cómo puedo ayudar?"
-      : "Idioma alterado para Português. Como posso ajudar?";
+      ? "Idioma cambiado a Español."
+      : "Idioma alterado para Português.";
 
-  if (!chatSession) return switchMessage;
+  if (!chatSession) return defaultMessage;
   
   try {
-    const response = await chatSession.sendMessage({ message: `SYSTEM: Switch language to ${language}.` });
-    return response.text || switchMessage;
+    // 1. Avisa a IA para mudar o idioma interno
+    await chatSession.sendMessage({ message: `[SYSTEM COMMAND: User changed language to ${language}. From now on, answer ONLY in ${language}. Reset conversation tone.]` });
+    
+    // 2. Retorna a mensagem de boas vindas original do novo idioma (hardcoded) para garantir a experiência correta
+    return WELCOME_MESSAGES[language];
   } catch (e) {
-    return switchMessage;
+    return WELCOME_MESSAGES[language] || defaultMessage;
   }
 };

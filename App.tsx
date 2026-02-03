@@ -74,33 +74,34 @@ const getSessionId = () => {
   }
 };
 
-// --- Daily Usage Logic ---
-const LIMIT_FREE = 12;
+// --- Usage Logic & Date Scheduling ---
+
+// DATA LIMITE DO BETA: 21 de Fevereiro de 2025 (00:00)
+// Até dia 20/02/2025 às 23:59, o uso é ILIMITADO para testes.
+const BETA_END_DATE = new Date('2025-02-21T00:00:00').getTime();
+
+const LIMIT_FREE = 2; // LIFETIME TOTAL
 const LIMIT_PREMIUM = 50;
 
-const getDailyUsage = (): number => {
+// Mudança: Uso Total (Lifetime) ao invés de Diário
+const getTotalUsage = (): number => {
   try {
-    const today = new Date().toISOString().split('T')[0];
-    const stored = localStorage.getItem('boba_daily_usage');
+    // Usamos uma chave nova para contar o uso pós-beta
+    const stored = localStorage.getItem('boba_free_usage_total');
     if (stored) {
-      const { date, count } = JSON.parse(stored);
-      if (date === today) {
-        return count;
-      }
+      return parseInt(stored, 10);
     }
-    localStorage.setItem('boba_daily_usage', JSON.stringify({ date: today, count: 0 }));
     return 0;
   } catch (e) {
     return 0;
   }
 };
 
-const incrementDailyUsage = (): number => {
+const incrementTotalUsage = (): number => {
   try {
-    const today = new Date().toISOString().split('T')[0];
-    const current = getDailyUsage();
+    const current = getTotalUsage();
     const newCount = current + 1;
-    localStorage.setItem('boba_daily_usage', JSON.stringify({ date: today, count: newCount }));
+    localStorage.setItem('boba_free_usage_total', newCount.toString());
     return newCount;
   } catch (e) {
     return 0;
@@ -150,7 +151,7 @@ const AppContent: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [language, setLanguage] = useState<Language>('en'); 
   const [isConversationFinished, setIsConversationFinished] = useState(false);
-  const [dailyCount, setDailyCount] = useState(0);
+  const [usageCount, setUsageCount] = useState(0);
   
   // Auth & Plan State
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -182,7 +183,7 @@ const AppContent: React.FC = () => {
 
   // --- 1. Load User & Persist Login ---
   useEffect(() => {
-    setDailyCount(getDailyUsage());
+    setUsageCount(getTotalUsage());
 
     // Listener para Auth State (Persistência)
     const unsubscribe = subscribeToAuthChanges(async (user) => {
@@ -278,7 +279,8 @@ const AppContent: React.FC = () => {
 
   const handleResetMemory = () => {
     localStorage.removeItem(MEMORY_KEY); // Limpa a memória de 3 dias
-    localStorage.removeItem('boba_daily_usage');
+    // Opcional: Não resetar o uso total para evitar "burla" do free plan
+    // localStorage.removeItem('boba_free_usage_total'); 
     sessionStorage.removeItem('boba_session_id');
     window.location.reload();
   };
@@ -297,12 +299,14 @@ const AppContent: React.FC = () => {
     setLanguage(newLang);
     setIsLoading(true);
     try {
-      const responseText = await changeBotLanguage(newLang);
-      if (responseText) {
+      // Ao trocar de idioma, a função agora retorna a mensagem de boas-vindas traduzida
+      const welcomeText = await changeBotLanguage(newLang);
+      
+      if (welcomeText) {
         setMessages((prev) => [...prev, {
           id: Date.now().toString(),
           role: Role.MODEL,
-          text: responseText,
+          text: welcomeText,
           timestamp: Date.now(),
         }]);
       }
@@ -316,14 +320,20 @@ const AppContent: React.FC = () => {
   const handleSendMessage = useCallback(async (e?: React.FormEvent) => {
     e?.preventDefault();
     
-    // LIMIT LOGIC
+    // LIMIT LOGIC (Com Período de Teste Beta)
+    const now = Date.now();
+    const isBetaPeriod = now < BETA_END_DATE;
     const isPremium = userProfile?.subscription_tier && userProfile.subscription_tier !== 'free';
-    const currentLimit = isPremium ? LIMIT_PREMIUM : LIMIT_FREE;
-    const isBlocked = dailyCount >= currentLimit;
+    
+    // Se for premium OU estiver no período beta, o limite é "infinito"
+    // Caso contrário (Free pós-beta), usa o limite total
+    const currentLimit = (isPremium || isBetaPeriod) ? LIMIT_PREMIUM : LIMIT_FREE;
+    
+    const isBlocked = usageCount >= currentLimit;
 
     if (!input.trim() || isLoading || isConversationFinished) return;
     
-    // Se bloqueado, abre modal de upgrade (se free) ou avisa limite premium
+    // Se bloqueado, abre modal de upgrade (se free e fora do beta)
     if (isBlocked) {
         if (!isPremium) {
             setShowPlansModal(true);
@@ -345,11 +355,19 @@ const AppContent: React.FC = () => {
     setMessages((prev) => [...prev, userMessage]);
     trackEvent('user_message_sent');
 
-    const currentUsage = incrementDailyUsage();
-    setDailyCount(currentUsage);
+    // IMPORTANT: Só incrementamos o contador vitalício se NÃO for Beta e NÃO for Premium.
+    // Assim, quando o Beta acabar, o usuário Free começa com 0/2.
+    // Durante o Beta, ele pode usar a vontade sem gastar seus "créditos futuros".
+    let newUsage = usageCount;
+    if (!isBetaPeriod && !isPremium) {
+        newUsage = incrementTotalUsage();
+        setUsageCount(newUsage);
+    }
 
     try {
-      const responseText = await sendMessageToGemini(userText, currentUsage);
+      // Passa a contagem para a IA (se for beta, passamos 0 para não gatilhar avisos de fim)
+      const usageForPrompt = (isBetaPeriod || isPremium) ? 0 : newUsage;
+      const responseText = await sendMessageToGemini(userText, usageForPrompt);
       
       setMessages((prev) => [...prev, {
         id: (Date.now() + 1).toString(),
@@ -363,7 +381,7 @@ const AppContent: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, isConversationFinished, language, dailyCount, userProfile]);
+  }, [input, isLoading, isConversationFinished, language, usageCount, userProfile]);
 
   // --- PINNING & EDITING LOGIC ---
   
@@ -439,10 +457,30 @@ const AppContent: React.FC = () => {
       }
   };
 
+  // Logic to determine UI limits
+  const isBeta = Date.now() < BETA_END_DATE;
   const isPremium = userProfile?.subscription_tier && userProfile.subscription_tier !== 'free';
-  const currentLimit = isPremium ? LIMIT_PREMIUM : LIMIT_FREE;
-  const isLimitReached = dailyCount >= currentLimit;
-  const remainingMessages = Math.max(0, currentLimit - dailyCount);
+  const effectiveLimit = (isPremium || isBeta) ? LIMIT_PREMIUM : LIMIT_FREE;
+  const isLimitReached = usageCount >= effectiveLimit;
+  const remainingMessages = Math.max(0, effectiveLimit - usageCount);
+  
+  // Logic for placeholder text
+  const getPlaceholderText = () => {
+      if (isLimitReached) {
+          return isPremium ? ui.limitReachedPremium : ui.upgradeText;
+      }
+      
+      let limitText = "";
+      if (isPremium) {
+          limitText = "";
+      } else if (isBeta) {
+          limitText = " (Beta ∞)";
+      } else {
+          limitText = ` (${remainingMessages} ${language === 'pt' ? 'encontros' : 'encounters'})`;
+      }
+      
+      return `${ui.inputPlaceholder}${limitText}`;
+  };
 
   // --- RENDER CHAT ---
   const renderChatInterface = () => (
@@ -523,14 +561,14 @@ const AppContent: React.FC = () => {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={isLimitReached ? (isPremium ? ui.limitReachedPremium : ui.upgradeText) : `${ui.inputPlaceholder} (${remainingMessages})`}
-              disabled={isLoading || isConversationFinished || isLimitReached}
+              placeholder={getPlaceholderText()}
+              disabled={isLoading || isConversationFinished || (isLimitReached && !isPremium && !isBeta)}
               className="flex-1 bg-transparent px-4 py-3 outline-none text-[#006A71] placeholder-gray-400 disabled:opacity-50"
             />
             <button
-              type={isLimitReached && !isPremium ? "button" : "submit"}
+              type={(isLimitReached && !isPremium && !isBeta) ? "button" : "submit"}
               onClick={(e) => {
-                  if (isLimitReached && !isPremium) {
+                  if (isLimitReached && !isPremium && !isBeta) {
                       e.preventDefault();
                       setShowPlansModal(true);
                   }
@@ -538,12 +576,20 @@ const AppContent: React.FC = () => {
               disabled={(!input.trim() && !isLimitReached) || isLoading || isConversationFinished}
               className="p-3 bg-[#FF007F] text-white rounded-full hover:bg-[#d4006a] disabled:bg-gray-300 shadow-md"
             >
-              {isLimitReached && !isPremium ? <span className="text-[10px] font-bold px-1">UP</span> : "➤"}
+              {(isLimitReached && !isPremium && !isBeta) ? <span className="text-[10px] font-bold px-1">UP</span> : "➤"}
             </button>
           </form>
-          <button onClick={handleResetMemory} className="block mx-auto mt-2 text-[8px] text-gray-300 hover:text-red-400 uppercase tracking-widest">
-            Reset Memory
-          </button>
+          
+          {/* Data Disclaimer & Reset */}
+          <div className="mt-2 text-center space-y-1">
+             <p className="text-[9px] text-gray-400">
+                {ui.dataNotice || "Conversas gravadas para gerar o mapa. Contatos não são salvos."}
+             </p>
+             <button onClick={handleResetMemory} className="text-[8px] text-gray-300 hover:text-red-400 uppercase tracking-widest">
+                Reset Memory
+             </button>
+          </div>
+
         </div>
       </footer>
     </div>

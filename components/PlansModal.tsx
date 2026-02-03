@@ -106,8 +106,8 @@ export const PlansModal: React.FC<PlansModalProps> = ({ isOpen, onClose, userPro
                       {safeUi.planSelect || "Assinar Agora"}
                     </a>
                     
-                    <div className="mt-3 text-[10px] text-gray-500 font-medium bg-white/50 py-1 px-3 rounded-full inline-block">
-                       🔒 {safeUi.paymentNote || "Pagamento seguro via Stripe. Cancele a qualquer momento."}
+                    <div className="mt-4 text-xs text-gray-500 font-serif italic text-center px-4 leading-relaxed">
+                       {safeUi.paymentNote || "A small contribution to sustain a space for presence, not consumption."}
                     </div>
                   </>
                )}

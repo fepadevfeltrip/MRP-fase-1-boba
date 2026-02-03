@@ -16,12 +16,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, ui, onLog
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
+  const [consentGiven, setConsentGiven] = useState(false);
 
   if (!isOpen) return null;
 
   const handleSendLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
+    if (!consentGiven) {
+        setIsError(true);
+        setMessage("É necessário concordar com os termos para continuar.");
+        return;
+    }
     
     setIsLoading(true);
     setMessage('');
@@ -99,10 +105,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, ui, onLog
                     className="w-full p-4 bg-[#F8F8F4] rounded-xl border border-gray-200 focus:border-[#006A71] outline-none text-sm"
                     required
                 />
+                
+                {/* Checkbox de Consentimento */}
+                <div className="flex items-start gap-3 px-1">
+                    <input 
+                        type="checkbox" 
+                        id="authConsent"
+                        checked={consentGiven}
+                        onChange={(e) => setConsentGiven(e.target.checked)}
+                        className="mt-1 w-4 h-4 text-[#006A71] rounded border-gray-300 focus:ring-[#006A71]"
+                    />
+                    <label htmlFor="authConsent" className="text-[11px] text-gray-600 leading-tight cursor-pointer">
+                        {ui.consentText || "Concordo que minhas conversas sejam gravadas e processadas para gerar meu Mapa Vivo."}
+                    </label>
+                </div>
+
                 <button
                     type="submit"
-                    disabled={isLoading}
-                    className="w-full py-3 bg-[#006A71] text-white font-semibold rounded-full hover:bg-[#00555a] disabled:opacity-50 transition-colors shadow-md text-sm uppercase tracking-wide"
+                    disabled={isLoading || !consentGiven}
+                    className="w-full py-3 bg-[#006A71] text-white font-semibold rounded-full hover:bg-[#00555a] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md text-sm uppercase tracking-wide"
                 >
                     {isLoading ? "Enviando..." : (ui.sendMagicLink || "Enviar Código")}
                 </button>
