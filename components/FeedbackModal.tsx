@@ -12,6 +12,15 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, o
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Fallback seguro se ui estiver undefined
+  const safeUi = ui || {
+    feedbackTitle: "Como foi?",
+    feedbackPlaceholder: "...",
+    loading: "...",
+    submitFeedback: "Enviar",
+    skip: "Pular"
+  };
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,9 +33,9 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, o
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/40 backdrop-blur-sm animate-fade-in transition-opacity duration-300">
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/40 backdrop-blur-sm transition-opacity duration-300">
       <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-[#EAA823]/20 relative overflow-hidden transform transition-all scale-100">
-        {/* Decorative background blur */}
+        
         <div className="absolute top-[-20%] right-[-20%] w-32 h-32 bg-[#FF7D6B]/20 rounded-full blur-2xl"></div>
         <div className="absolute bottom-[-10%] left-[-10%] w-24 h-24 bg-[#006A71]/10 rounded-full blur-xl"></div>
         
@@ -38,7 +47,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, o
         </button>
 
         <h3 className="text-xl font-bold text-[#006A71] mb-2 text-center relative z-10 tracking-tight">
-          {ui.feedbackTitle}
+          {safeUi.feedbackTitle || "Feedback"}
         </h3>
         
         <div className="flex justify-center gap-2 mb-6 relative z-10 py-2">
@@ -70,7 +79,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, o
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder={ui.feedbackPlaceholder}
+          placeholder={safeUi.feedbackPlaceholder || ""}
           className="w-full p-4 bg-[#F8F8F4] rounded-xl border border-gray-200 focus:border-[#006A71] focus:ring-1 focus:ring-[#006A71] outline-none text-sm text-gray-700 resize-none h-24 mb-4 relative z-10 placeholder-gray-400"
         />
 
@@ -80,13 +89,13 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, o
             disabled={rating === 0 || isSubmitting}
             className="w-full py-3 bg-[#006A71] text-white font-semibold rounded-full hover:bg-[#00555a] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md text-sm uppercase tracking-wide"
           >
-            {isSubmitting ? ui.loading : ui.submitFeedback}
+            {isSubmitting ? (safeUi.loading || "...") : (safeUi.submitFeedback || "Enviar")}
           </button>
           <button 
              onClick={onClose}
              className="text-xs text-gray-400 hover:text-[#006A71] text-center py-1"
           >
-            {ui.skip}
+            {safeUi.skip || "Pular"}
           </button>
         </div>
       </div>

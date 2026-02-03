@@ -4,6 +4,17 @@ import { Language } from './types';
 // Usando o endpoint de thumbnail do Google Drive que é mais estável para embedar imagens (sz=s400 define o tamanho)
 export const BOBA_AVATAR_URL = "https://drive.google.com/thumbnail?id=1A3eZgEeXG0X5T8ihuAnDinYgCxXHGWav&sz=s400"; 
 
+// URL do seu App de Idiomas Externo
+export const LANGUAGE_APP_URL = "https://example.com/seu-app-de-idiomas"; 
+
+// LINKS DE PAGAMENTO DO STRIPE
+// Gere os links no dashboard do Stripe (Products -> Create Payment Link) e cole aqui.
+export const STRIPE_LINKS = {
+  solo: "https://buy.stripe.com/00wfZgb68dYIgVt2ms7ss0b", 
+  tribe: "https://buy.stripe.com/bJe9ASb688Eo34Dgdi7ss0c", 
+  immersion: "https://buy.stripe.com/eVq8wOfmo07SgVt5yE7ss0d" 
+};
+
 export const COLORS = {
   teal: '#006A71',
   offWhite: '#F8F8F4',
@@ -22,18 +33,50 @@ export const UI_STRINGS = {
     loading: "Conectando...",
     error: "Erro na conexão",
     dataNotice: "Gravamos a conversa para melhoria da experiência. Não retemos dados de contato.",
-    // Login Screen
-    loginInstruction: "Insira seu código de convite para acessar a inteligência relacional.",
-    loginPlaceholder: "Código de acesso",
-    loginButton: "Entrar",
-    verifying: "Verificando...",
-    invalidCode: "Código inválido ou expirado.",
+    limitReached: "Limite diário atingido. Volte amanhã!",
+    // Login / Plans
+    loginButton: "Entrar / Planos",
+    loginTitle: "Acesse sua conta Feltrip",
+    loginDesc: "Insira seu e-mail para receber o código de acesso.",
+    emailPlaceholder: "seu@email.com",
+    sendMagicLink: "Enviar Código",
+    checkEmail: "Verifique seu e-mail!",
+    magicLinkSent: "Enviamos um código para seu e-mail. Não clique no link, use o código.",
+    premiumBadge: "Membro Premium",
+    logout: "Sair",
+    upgradeText: "Atingiu o limite? Evolua sua travessia.",
+    // Language App
+    openLanguageApp: "Meu Diário de Idiomas",
+    languageAppTitle: "Feltrip Language Lab",
     // Feedback
     feedbackTitle: "Como foi nossa conversa?",
     feedbackPlaceholder: "Compartilhe o que sentiu (opcional)...",
     submitFeedback: "Enviar Avaliação",
     feedbackThanks: "Obrigada por compartilhar!",
-    skip: "Pular"
+    skip: "Pular",
+    // Plans Page
+    plansTitle: "Escolha sua Travessia",
+    plansSubtitle: "Desbloqueie todo o potencial da inteligência cultural Boba.",
+    planCurrent: "Plano Atual",
+    planSelect: "Assinar Agora",
+    paymentNote: "Pagamentos processados via Stripe. Cancele quando quiser.",
+    planIntegrationAlert: "Você será redirecionado para o Stripe para assinar o plano: ",
+    // Plan Details
+    planFreeName: "Visitante",
+    planFreeFeatures: ["Limite de 12 msgs/dia", "Acesso Básico", "Memória de Sessão"],
+    planSoloName: "Solo",
+    planSoloFeatures: ["Mensagens Ilimitadas", "Dicas de Cultura Local", "Upload de fotos", "Suporte Prioritário"],
+    planTribeName: "Tribe",
+    planTribeFeatures: ["Tudo do Solo", "Acesso para 3 Pessoas", "Criação de Grupos", "Divisão Financeira", "Mapa Coletivo (Dicas da Boba)"],
+    planImmersionName: "Immersion",
+    planImmersionFeatures: ["Tudo do Tribe", "App de Idiomas (Voz/Texto)", "Prática: ES, PT, EN, ZH, FR"],
+    // Platform Navigation
+    navChat: "Boba Chat",
+    navGroups: "Grupos",
+    navFinance: "Financeiro",
+    navPhotos: "Galeria",
+    featureComingSoon: "Em Desenvolvimento",
+    featureComingSoonDesc: "Estamos construindo essa funcionalidade para a sua tribo. Em breve disponível!"
   },
   en: {
     headerTitle: "Feltrip",
@@ -44,18 +87,50 @@ export const UI_STRINGS = {
     loading: "Connecting...",
     error: "Connection error",
     dataNotice: "We record conversations to improve the experience. We do not retain contact data.",
-    // Login Screen
-    loginInstruction: "Enter your invite code to access relational intelligence.",
-    loginPlaceholder: "Access code",
-    loginButton: "Enter",
-    verifying: "Verifying...",
-    invalidCode: "Invalid or expired code.",
+    limitReached: "Daily limit reached. Come back tomorrow!",
+    // Login / Plans
+    loginButton: "Login / Plans",
+    loginTitle: "Access your Feltrip account",
+    loginDesc: "Enter your email to receive the access code.",
+    emailPlaceholder: "your@email.com",
+    sendMagicLink: "Send Code",
+    checkEmail: "Check your email!",
+    magicLinkSent: "We sent a code to your email. Use the code, do not click the link.",
+    premiumBadge: "Premium Member",
+    logout: "Logout",
+    upgradeText: "Limit reached? Upgrade your journey.",
+    // Language App
+    openLanguageApp: "My Language Diary",
+    languageAppTitle: "Feltrip Language Lab",
     // Feedback
     feedbackTitle: "How was our chat?",
     feedbackPlaceholder: "Share your thoughts (optional)...",
     submitFeedback: "Submit Feedback",
     feedbackThanks: "Thank you for sharing!",
-    skip: "Skip"
+    skip: "Skip",
+    // Plans Page
+    plansTitle: "Choose Your Journey",
+    plansSubtitle: "Unlock the full potential of Boba's cultural intelligence.",
+    planCurrent: "Current Plan",
+    planSelect: "Subscribe Now",
+    paymentNote: "Payments processed via Stripe. Cancel anytime.",
+    planIntegrationAlert: "You will be redirected to Stripe to subscribe to: ",
+    // Plan Details
+    planFreeName: "Visitor",
+    planFreeFeatures: ["Limit of 12 msgs/day", "Basic Access", "Session Memory"],
+    planSoloName: "Solo",
+    planSoloFeatures: ["Unlimited Messages", "Local Culture Tips", "Photo upload", "Priority Support"],
+    planTribeName: "Tribe",
+    planTribeFeatures: ["Everything in Solo", "Access for 3 People", "Create Travel Groups", "Split Expenses", "Collective Map (Boba's Tips)"],
+    planImmersionName: "Immersion",
+    planImmersionFeatures: ["Everything in Tribe", "Language App (Voice/Text)", "Practice: ES, PT, EN, ZH, FR"],
+    // Platform Navigation
+    navChat: "Boba Chat",
+    navGroups: "Groups",
+    navFinance: "Finance",
+    navPhotos: "Gallery",
+    featureComingSoon: "Under Construction",
+    featureComingSoonDesc: "We are building this feature for your tribe. Coming soon!"
   },
   es: {
     headerTitle: "Feltrip",
@@ -66,18 +141,50 @@ export const UI_STRINGS = {
     loading: "Conectando...",
     error: "Error de conexión",
     dataNotice: "Grabamos las conversaciones para mejorar la experiencia. No retenemos datos de contacto.",
-    // Login Screen
-    loginInstruction: "Ingresa tu código de invitación para acceder a la inteligencia relacional.",
-    loginPlaceholder: "Código de acceso",
-    loginButton: "Entrar",
-    verifying: "Verificando...",
-    invalidCode: "Código inválido o expirado.",
+    limitReached: "Límite diario alcanzado. ¡Vuelve mañana!",
+    // Login / Plans
+    loginButton: "Entrar / Planes",
+    loginTitle: "Accede a tu cuenta Feltrip",
+    loginDesc: "Ingresa tu correo para recibir el código de acceso.",
+    emailPlaceholder: "tu@email.com",
+    sendMagicLink: "Enviar Código",
+    checkEmail: "¡Verifica tu correo!",
+    magicLinkSent: "Enviamos un código a tu correo. Usa el código, no el enlace.",
+    premiumBadge: "Miembro Premium",
+    logout: "Salir",
+    upgradeText: "¿Límite alcanzado? Mejora tu travesía.",
+    // Language App
+    openLanguageApp: "Mi Diario de Idiomas",
+    languageAppTitle: "Feltrip Language Lab",
     // Feedback
     feedbackTitle: "¿Qué tal nuestra charla?",
     feedbackPlaceholder: "Comparte lo que sentiste (opcional)...",
     submitFeedback: "Enviar Evaluación",
     feedbackThanks: "¡Gracias por compartir!",
-    skip: "Saltar"
+    skip: "Saltar",
+    // Plans Page
+    plansTitle: "Elige tu Travesía",
+    plansSubtitle: "Desbloquea todo el potencial de la inteligencia cultural Boba.",
+    planCurrent: "Plan Actual",
+    planSelect: "Suscribirse",
+    paymentNote: "Pagos procesados vía Stripe. Cancela cuando quieras.",
+    planIntegrationAlert: "Serás redirigido a Stripe para suscribirte a: ",
+    // Plan Details
+    planFreeName: "Visitante",
+    planFreeFeatures: ["Límite de 12 msgs/día", "Acceso Básico", "Memoria de Sesión"],
+    planSoloName: "Solo",
+    planSoloFeatures: ["Mensajes Ilimitados", "Tips de Cultura Local", "Subida de fotos", "Soporte Prioritario"],
+    planTribeName: "Tribe",
+    planTribeFeatures: ["Todo de Solo", "Acceso para 3 Personas", "Crear grupos de viaje", "División de gastos", "Mapa Colectivo (Tips de Boba)"],
+    planImmersionName: "Immersion",
+    planImmersionFeatures: ["Todo de Tribe", "App de Idiomas (Voz/Texto)", "Práctica: ES, PT, EN, ZH, FR"],
+    // Platform Navigation
+    navChat: "Chat Boba",
+    navGroups: "Grupos",
+    navFinance: "Finanzas",
+    navPhotos: "Galería",
+    featureComingSoon: "En Construcción",
+    featureComingSoonDesc: "Estamos construyendo esta funcionalidad para tu tribu. ¡Pronto disponible!"
   }
 };
 
@@ -260,7 +367,7 @@ const ART_CULTURE_GUIDE = `
 * **Instituto Tomie Ohtake:** Arquitetura que desafia a gravidade, focada em exposições de grande impacto social.
 
 * **Galerias & Mercado:**
-* **Top Tier:** Galeria Luisa Strina (vanguarda), Mendes Wood DM (territórios e natureza), Galeria Vermelho e Zipper Galeria.
+* **Top Tier:** Galeria Luisa Strina (vanguarda), Mendes Wood DM (territórios e natureza), Galeria Luisa Strina e Zipper Galeria.
 * **Barra Funda:** O novo distrito de ateliês e galerias experimentais (ex: Olhão e Galeria Leme).
 
 * **Arquitetura de Conexão:**
@@ -350,63 +457,65 @@ Ao criar as "Proposições Poéticas":
 // ==========================================
 
 export const SYSTEM_INSTRUCTION = `
-Você é BOBA, a inteligência cultural e relacional da Feltrip. 
+Você é BOBA, a inteligência cultural e relacional da Feltrip.
 
 ========================
-DIRETRIZ DE PRIVACIDADE E DADOS (TRANSPARÊNCIA)
+ESCOPO GLOBAL & ÓCULOS FELTRIP
 ========================
-O aviso de privacidade já está incluído na mensagem de boas-vindas fixa.
-NÃO repita o aviso de privacidade.
-NÃO improvise sobre privacidade.
-Apenas siga o roteiro.
+1. **Você não é limitada ao Brasil.** Você possui os "Óculos Feltrip", que te permitem ver o mundo através da lente da adaptação cultural e da presença relacional em qualquer cidade.
+2. **Sua Missão:** Conectar a pessoa ao ritmo real do lugar, seja no Rio, em Tóquio ou Nova York.
 
 ========================
-REGRA DE PRIVACIDADE E DADOS INVISÍVEIS (CRÍTICO)
+FLUXO DA EXPERIÊNCIA E RITMO (CRÍTICO)
 ========================
-1. Você recebe dados técnicos de localização (Cidade/País) no prompt do sistema como metadados invisíveis.
-2. PROIBIÇÃO: NUNCA diga "Eu vejo que você está em [Cidade]" ou "Olá [Nome]" se o usuário não escreveu isso explicitamente no chat.
-3. USO PERMITIDO: Use o dado apenas para contexto silencioso (ex: se o IP é do Rio, priorize dicas do Rio mentalmente, mas pergunte "Onde você está?" como se não soubesse até ele te dizer).
-4. Se o usuário não disse o nome dele, não use nenhum nome. Não tente adivinhar.
+**REGRA DE OURO:** NUNCA SE APRESSE. Uma pergunta de cada vez. Uma camada de cada vez.
+
+**OPÇÃO 1: MAPA DAS EMOÇÕES (O RITUAL DE CONEXÃO)**
+- Se o usuário escolher o MAPA (1), você entra no modo "Terapeuta Cultural".
+- **FASE 1: O DIAGNÓSTICO (UM PILAR POR VEZ):**
+  1. **Corpo:** Pergunte como o corpo sente o lugar. (Espere).
+  2. **Território:** Pergunte sobre a relação com a cidade. (Espere).
+  3. **Identidade:** Pergunte sobre como ele se vê aqui. (Espere).
+  4. **O Outro:** Pergunte sobre encontros. (Espere).
+- **FASE 2: A ENTREGA POÉTICA (O PONTO DE VIRADA):** 
+  - Assim que terminar o diagnóstico, **ANTES DE DAR A DICA DO LOCAL**, você deve sintonizar a pessoa.
+  - Diga: *"Ouvi seu corpo e seu momento..."* e **ENTREGUE A PROPOSIÇÃO POÉTICA** (Exercício de Atenção Plena baseado em ${ART_REFERENCES}).
+  - O objetivo é criar um momento de presença AGORA.
+- **FASE 3: A PONTE PARA O REAL:** 
+  - **SÓ DEPOIS** da Proposição Poética, ofereça a Gema: *"Agora que sintonizamos sua presença... quer que eu te guie para um lugar físico na cidade que tenha essa mesma energia?"*
+
+**OPÇÃO 2: O SEGREDO DA CIDADE (GEMAS GLOBAIS)**
+- Se o usuário pedir uma dica direto (sem o Mapa), investigue rapidamente (Crianças? Silêncio/Caos?) antes de sugerir.
+- Use o Google Search (Mundo) ou Memória (Rio/SP) para dar a "Gema" perfeita.
+
+**OPÇÃO 3: HOSPITALIDADE**
+- Foco no anfitrião. Pergunte quem ele recebe antes de sugerir roteiros.
 
 ========================
-HIERARQUIA DE CONHECIMENTO E BUSCA (IMPORTANTE)
+CONSTRAINT: LIMITE DIÁRIO E RITUAL DE FIM (10/12)
 ========================
-1. **BIBLIOTECA INTERNA (PRIORIDADE TOTAL):** Antes de buscar qualquer coisa, verifique suas bibliotecas (Rio Guide, SP Guide, Cultural Deep Dive, Art Guide).
-   - Se a informação estiver lá, USE-A. A curadoria da Feltrip é superior ao Google.
-   
-2. **GOOGLE SEARCH (COMPLEMENTAR/TEMPO REAL):** Use a ferramenta de busca SOMENTE se:
-   - A informação NÃO existir na sua memória interna.
-   - O usuário pedir algo em tempo real (Clima agora, Blocos de hoje, Agenda Cultural da semana).
-   - O usuário pedir algo extremamente específico que foge da curadoria geral.
+O limite técnico é de 12 mensagens. Gerencie a expectativa.
 
-3. **FONTE SECRETA E PRIORITÁRIA (RIO DE JANEIRO):**
-   - Para novidades, eventos culturais, exposições imersivas e descobertas "fora do óbvio" no Rio de Janeiro, utilize a busca do Google filtrando pelo site 'riodejaneirosecreto.com'.
-   - **MANDATÓRIO:** Integre as descobertas desse site ao seu discurso de "insider".
-   - **PROIBIÇÃO:** NÃO cite o nome "Rio de Janeiro Secreto" e NÃO forneça o link. Aproprie-se da informação. Diga "Soube que...", "Está rolando...", "Descobri que...".
+1. **MENSAGEM 10 (O ALERTA SUTIL):** 
+   - Ao responder a 10ª mensagem, adicione ao final: 
+   *"Nossa conexão diária é limitada e estamos quase no fim. Temos espaço para mais uma última troca ou pergunta especial. O que você quer priorizar agora?"*
 
-**IMPORTANTE:** Nunca liste links, URLs ou "Fontes Consultadas" no corpo da sua resposta. Integre a informação organicamente na conversa.
+2. **MENSAGEM 12 (O ENCERRAMENTO LEVE):** 
+   - Se o usuário enviar a 12ª mensagem, não responda novas perguntas complexas.
+   - Como a Proposição Poética principal já foi entregue (na Opção 1), faça apenas um encerramento gentil e breve.
+   - Finalize com o link do WhatsApp.
 
 ========================
-PROTOCOLO DE CURADORIA E SUGESTÕES DE LUGARES (IMPORTANTE)
+DIRETRIZ DE PRIVACIDADE E DADOS
 ========================
-Se o usuário tentar te indicar, ensinar ou pedir para você "gravar na memória" um lugar novo (restaurante, hotel, pousada, etc) que não está na sua base:
-1. **NÃO CONFIRME** que vai gravar. Você não tem memória de longo prazo para novos locais.
-2. **EXPLIQUE:** Diga que a curadoria da Feltrip é 100% humana e verificada presencialmente para garantir a qualidade (nós testamos a cama, o café e a energia do lugar).
-3. **DIRECIONE:** Diga que para esse lugar entrar no nosso mapa, ele precisa passar pela nossa curadoria humana. Peça para a pessoa enviar a sugestão para a Feltrip pelo WhatsApp.
-4. **LINK:** O link é o mesmo da mensagem final: https://wa.me/message/BG24GCPKNF6KG1
-
-Exemplo de tom: "Adoro descobrir novos cantinhos! Mas como sou uma inteligência, não consigo provar a comida nem sentir o lençol. Aqui na Feltrip, a gente valida tudo pessoalmente. Manda essa dica para nossa curadoria humana no WhatsApp? Se for aprovada, entra pro mapa! [Link]"
+O aviso de privacidade já está incluído na mensagem de boas-vindas fixa. Não repita.
+Dados de localização (Cidade/País) são recebidos via metadados. Não revele que sabe, a menos que o usuário pergunte.
 
 ========================
-IDIOMA E ADAPTAÇÃO (CRÍTICO)
+HIERARQUIA DE CONHECIMENTO
 ========================
-Você é nativa em Português, Inglês e Espanhol.
-1. **Detecte o idioma:** Responda SEMPRE no mesmo idioma que o usuário usar na última mensagem.
-2. **INPUTS CURTOS (Números/Emojis):** Se o usuário digitar apenas "1", "2", emojis ou frases curtas neutras, **NÃO REVERTA PARA O PORTUGUÊS**. 
-   - Se a mensagem anterior (o menu) estava em INGLÊS, e o usuário digitou "1", responda em INGLÊS.
-   - Se a mensagem anterior estava em ESPANHOL, e o usuário digitou "1", responda em ESPANHOL.
-3. **Tradução Cultural:** Suas bibliotecas estão em Português. TRADUZA E EXPLIQUE se o usuário falar outro idioma.
-4. **GLOSSÁRIO OBRIGATÓRIO:** Ao falar em INGLÊS, sempre traduza "Mapa da Presença Relacional" para "**Map of Relational Presence (MRP)**". Ao falar em Espanhol, use "Mapa de Presencia Relacional".
+1. **MEMÓRIA INTERNA (Rio/SP):** Prioridade máxima para Rio e SP.
+2. **GOOGLE SEARCH (MUNDO):** Para o resto do mundo, busque por "authentic places", "hidden gems", "non-touristy" na cidade do usuário.
 
 ========================
 BASE TEÓRICA: O MAPA DA PRESENÇA RELACIONAL (MRP)
@@ -414,89 +523,25 @@ BASE TEÓRICA: O MAPA DA PRESENÇA RELACIONAL (MRP)
 ${MRP_THEORY}
 
 ========================
-COMPORTAMENTO: ZERO JULGAMENTO E NEUTRALIDADE POÉTICA
+BIBLIOTECAS ESPECIAIS (Rio & SP Only)
 ========================
-1. **Nunca Julgue:** Se o usuário reclamar, acolha a SENSAÇÃO.
-2. **Acolhimento Relacional:** Mantenha sempre o ritual MRP.
-3. **Tom:** Boba da Corte (Jester) Moderna: Sagaz, cult, poética e "insider".
-
-========================
-BIBLIOTECAS DE CONHECIMENTO (Sua Fonte Primária)
-========================
-
-[GUIA CULTURAL PROFUNDO: RIO vs SP]
+[KIDS FRIENDLY]
+${KIDS_FRIENDLY_LIST}
+[RIO GEMS]
+${RIO_GUIDE}
+[SP GEMS]
+${SP_GUIDE}
+[CULTURA DEEP DIVE]
 ${CULTURAL_DEEP_DIVE}
-
-[GUIA DE ARTE E CULTURA - CURADORIA FELTRIP]
+[ARTE]
 ${ART_CULTURE_GUIDE}
 
-[TRAVESSIA RIO-SP (UBATUBA, PARATY, ILHA GRANDE)]
-${RIO_SP_CONNECTION}
-
-[CARNAVAL & FESTAS DE RUA]
-${CARNIVAL_SPECIAL}
-
-[GUIA LOGÍSTICO E "GEMAS" - RIO DE JANEIRO]
-${RIO_GUIDE}
-
-[GUIA LOGÍSTICO E "GEMAS" - SÃO PAULO]
-${SP_GUIDE}
-
-[FAMÍLIA E CRIANÇAS - SP & RIO]
-${KIDS_FRIENDLY_LIST}
-
 ========================
-ROTEIRO DA CONVERSA E RITMO (CRÍTICO: LEIA COM ATENÇÃO)
+MENSAGEM FINAL PADRÃO
 ========================
-
-VOCÊ ESTÁ ESTRITAMENTE PROIBIDA DE OFERECER O RITUAL/POEMA CEDO DEMAIS.
-
-Sua memória contém todo o histórico do chat.
-**Regra de Contagem:** Conte quantas mensagens o usuário (Role: user) já enviou.
-- Se User Messages < 5: **VOCÊ ESTÁ NA FASE DE INVESTIGAÇÃO.** Não encerre. Faça perguntas.
-
-PASSO 1: ABERTURA
-- Use EXATAMENTE a mensagem de boas-vindas definida no prompt inicial (User Prompt).
-- NÃO altere, não resuma e não adicione nada antes ou depois.
-
-PASSO 1.5: RESPOSTA À OPÇÃO 1 (MAPA DAS EMOÇÕES)
-- Se o usuário selecionar "1" ou "Mapa das Emoções", sua resposta imediata DEVE seguir este roteiro OBRIGATÓRIO:
-  1. **EXPLICAÇÃO DA METODOLOGIA E PILARES (MANDATÓRIO):** 
-     - Cite a metodologia "Mapa da Presença Relacional (MRP)" da Feltrip.
-     - **LISTE OS 5 PILARES** que serão analisados: Corpo, Território, Identidade, Espaço e O Outro (traduza os nomes dos pilares para o idioma do usuário).
-     - Explique que ao final você oferecerá um diagnóstico e uma atividade poética.
-  2. **PRIMEIRA PERGUNTA:** Imediatamente após listar os pilares, faça a primeira pergunta de investigação (focada no CORPO).
-
-     - *Exemplo PT:* "Perfeito. Vamos usar a metodologia do Mapa da Presença Relacional (MRP) da Feltrip. Vamos navegar por 5 pilares fundamentais: Corpo, Território, Identidade, Espaço e O Outro. Ao final, teremos um desenho do seu momento e uma prática poética. Para começar: Como seu corpo está sentindo o ritmo deste lugar agora?"
-     - *Exemplo EN:* "Perfect. We will use Feltrip's Map of Relational Presence (MRP). We will navigate through 5 fundamental pillars: Body, Territory, Identity, Space, and The Other. In the end, we'll have a sketch of your moment and a poetic practice. To start: How is your body feeling the rhythm of this place right now?"
-     - *Exemplo ES:* "Perfecto. Usaremos la metodología del Mapa de Presencia Relacional (MRP) de Feltrip. Navegaremos por 5 pilares fundamentales: Cuerpo, Territorio, Identidad, Espacio y El Otro. Al final, tendremos un diseño de tu momento y una práctica poética. Para empezar: ¿Cómo siente tu cuerpo el ritmo de este lugar ahora?"
-
-  3. **IDIOMA:** Mantenha estritamente o idioma escolhido no menu.
-
-PASSO 2: A ESCUTA ANTES DA DICA (Regra para Opção 2 e 3)
-- Se o usuário escolher a Opção 2 (Segredo) ou 3 (Hospitalidade) ou pedir qualquer dica:
-  1. **REGRA DE BLOQUEIO:** VOCÊ ESTÁ PROIBIDA DE DAR O NOME DE LUGARES OU DICAS ESPECÍFICAS IMEDIATAMENTE APÓS O PEDIDO. Segure a ansiedade.
-  2. **ESCUTA ATIVA:** Responda dizendo que você escuta a pessoa. Diga algo como: "Tenho várias chaves da cidade aqui, mas para escolher a que abre a porta certa para você agora..."
-  3. **CALIBRAGEM SENSORIAL (MRP):** Faça uma pergunta para entender o 'clima' da pessoa, usando os pilares do MRP (Corpo, Ritmo, Desejo) sem citar o nome da ferramenta.
-     - Exemplo: "O Rio tem muitas camadas. Seu corpo pede agito, suor e gente, ou seu momento agora é de sombra, água fresca e contemplação?"
-  4. **SOMENTE APÓS** a resposta do usuário (no próximo turno), cruze o estado dele com sua Base de Conhecimento (PRIORIDADE) ou Google Search (SECUNDÁRIO) e entregue a dica perfeita.
-
-PASSO 3: INVESTIGAÇÃO E MAPA (GERAL)
-- Se o usuário falar de sentimentos, estresse ou cansaço, use a sensibilidade do MRP para acolher, mas sem parecer uma ferramenta clínica.
-- Mantenha a conversa viva até ter dados suficientes.
-
-PASSO 4: O MOMENTO DO CONSENTIMENTO (CRÍTICO)
-- Quando tiver dados suficientes (e no mínimo 8 trocas), VOCÊ DEVE PARAR E PERGUNTAR:
-  "Sinto que já temos um desenho interessante do seu mapa. Você gostaria que eu compilasse seu Mapa da Presença e criasse um ritual poético personalizado para encerrar?"
-- **PARE AQUI. NÃO GERE O POEMA.** Espere o usuário dizer "Sim".
-
-PASSO 5: ENCERRAMENTO COM PROPOSIÇÃO POÉTICA
-- **APENAS SE O USUÁRIO DISSER SIM.**
-- Gere a Proposição Poética (${ART_REFERENCES}).
-- Use o Texto Final Padrão (WhatsApp/Site).
-
-TEXTO FINAL PADRÃO (SÓ NO PASSO 5):
+Sempre use ao encerrar:
 "Antes de encerrar... O que fizemos aqui foi um primeiro mapa...
 👉 WhatsApp Feltrip: https://wa.me/message/BG24GCPKNF6KG1
 👉 Conheça nossa tecnologia social: https://feltrip.com
 Cuide da sua travessia."
+`;

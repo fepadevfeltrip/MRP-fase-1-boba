@@ -1,9 +1,10 @@
+
 import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
 import { SYSTEM_INSTRUCTION } from "../constants";
 import { Language, UserLocation } from "../types";
 
 let chatSession: Chat | null = null;
-let currentLanguage: Language = 'pt';
+let currentLanguage: Language = 'en'; // Default English
 let lastUserLocation: UserLocation | undefined = undefined;
 let isFallbackMode = false; // Flag para saber se estamos rodando no modo "sem conexão inicial"
 
@@ -15,15 +16,15 @@ const getAIClient = () => {
   return new GoogleGenAI({ apiKey });
 };
 
-// Mensagens de boas-vindas "hardcoded" para fallback
+// Mensagens de boas-vindas globais (sem citar apenas Rio/SP)
 const WELCOME_MESSAGES = {
-  pt: `Oi! Sou a Boba, sua boba da corte moderna e alma cultural.\n\nQual caminho devemos seguir?\n\n1. Mapa das Emoções do Viajante: (Como estou me movendo pelo mundo agora?)\n2. Um segredo da cidade: (Me mostre o 'ouro escondido' no Rio ou em São Paulo.)\n3. Hospitalidade: (Estou recebendo alguém e quero ser o guia definitivo.)`,
-  en: `I'm Boba, your modern-day jester and a cultural soul.\n\nIt’s about being truly present, not just passing through.\n\nWhich path shall we take?\n\n1. Traveler's Emotions Map: (How am I moving through the world right now?)\n2. A city secret: (Show me the 'hidden gold' in Rio or São Paulo.)\n3. Hospitality: (I’m hosting someone and want to be the ultimate guide.)`,
-  es: `Hola, soy Boba, tu bufona moderna y alma cultural.\n\n¿Qué camino debemos seguir?\n\n1. Mapa de las Emociones del Viajero: (¿Cómo me muevo por el mundo ahora?)\n2. Un secreto de la ciudad: (Muéstrame el 'oro escondido' en Río o São Paulo.)\n3. Hospitalidad: (Recibo a alguien y quiero ser la guía definitiva.)`
+  pt: `Oi! Sou a Boba, sua boba da corte moderna e alma cultural.\n\nCom meus óculos Feltrip, vejo o mundo através da adaptação e da presença.\n\nQual caminho devemos seguir hoje?\n\n1. Mapa das Emoções do Viajante: (Como estou me movendo pelo mundo agora?)\n2. Um segredo da cidade: (Me mostre o 'ouro escondido' de onde estou.)\n3. Hospitalidade: (Estou recebendo alguém e quero ser o guia definitivo.)`,
+  en: `I'm Boba, your modern-day jester and a cultural soul.\n\nWith my Feltrip glasses, I see the world through adaptation and presence.\n\nWhich path shall we take today?\n\n1. Traveler's Emotions Map: (How am I moving through the world right now?)\n2. A city secret: (Show me the 'hidden gold' where I am.)\n3. Hospitality: (I’m hosting someone and want to be the ultimate guide.)`,
+  es: `Hola, soy Boba, tu bufona moderna y alma cultural.\n\nCon mis gafas Feltrip, veo el mundo a través de la adaptación y la presencia.\n\n¿Qué camino debemos seguir hoy?\n\n1. Mapa de las Emociones del Viajero: (¿Cómo me muevo por el mundo ahora?)\n2. Un secreto de la ciudad: (Muéstrame el 'oro escondido' donde estoy.)\n3. Hospitalidad: (Recibo a alguien y quiero ser la guía definitiva.)`
 };
 
 export const initializeChat = async (
-  language: Language = 'pt', 
+  language: Language = 'en', 
   isRetryAttempt: boolean = false,
   userLocation?: UserLocation
 ): Promise<string> => {
@@ -31,7 +32,7 @@ export const initializeChat = async (
   lastUserLocation = userLocation;
   isFallbackMode = false;
   
-  const defaultWelcome = WELCOME_MESSAGES[language] || WELCOME_MESSAGES['pt'];
+  const defaultWelcome = WELCOME_MESSAGES[language] || WELCOME_MESSAGES['en'];
 
   try {
     const ai = getAIClient();
@@ -48,7 +49,7 @@ export const initializeChat = async (
     let startPrompt = "";
     
     const locationContext = userLocation?.city && userLocation?.country_name
-      ? `\n[METADADOS TÉCNICOS (SIGILO ABSOLUTO): O IP do usuário indica: ${userLocation.city}, ${userLocation.country_name}.]`
+      ? `\n[METADADOS TÉCNICOS (SIGILO ABSOLUTO): O IP do usuário indica: ${userLocation.city}, ${userLocation.country_name}. Use isso para buscar GEMAS locais se ele pedir.]`
       : "";
 
     if (isRetryAttempt) {
@@ -70,23 +71,22 @@ export const initializeChat = async (
     return response.text || defaultWelcome;
 
   } catch (error) {
-    console.warn("Failed to reach Gemini for welcome message (Network/Facebook Block). Using fallback.", error);
-    isFallbackMode = true; // Marca que a conexão real falhou e estamos usando o texto gravado
+    console.warn("Failed to reach Gemini for welcome message. Using fallback.", error);
+    isFallbackMode = true; 
     return defaultWelcome;
   }
 };
 
-export const sendMessageToGemini = async (userMessage: string): Promise<string> => {
+export const sendMessageToGemini = async (userMessage: string, dailyCount: number = 0): Promise<string> => {
   // 1. Recuperação de Sessão Perdida ou Nula
   if (!chatSession) {
     try {
-      // Tenta recriar a sessão silenciosamente
       const ai = getAIClient();
       chatSession = ai.chats.create({
         model: 'gemini-3-flash-preview',
         config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{googleSearch: {}}] },
       });
-      isFallbackMode = true; // Se recriamos agora, perdemos o histórico anterior, então tratamos como fallback
+      isFallbackMode = true;
     } catch (e) {
       console.error("Critical: Could not recreate session object", e);
       return getFacebookErrorMessage();
@@ -96,15 +96,20 @@ export const sendMessageToGemini = async (userMessage: string): Promise<string> 
   try {
     let finalMessageToSend = userMessage;
 
-    // 2. Injeção de Contexto (Se a inicialização tinha falhado)
-    // Se estávamos no modo Fallback, a IA não sabe que "enviou" o menu de opções.
-    // O usuário vai mandar "1", e a IA vai pensar "1 o quê?".
-    // Aqui injetamos o contexto invisível para o usuário.
+    // Injeção de Contexto de Contagem para controle de fluxo
+    let countInjection = `\n\n[SYSTEM NOTE: This is user message number ${dailyCount}/12 (Daily Limit).]`;
+    
+    if (dailyCount === 10) {
+      countInjection += `\n[TRIGGER: WARNING] You MUST inform the user that their daily connection is almost over (limit 12). Ask them: "We have a daily limit. What is the LAST thing you want to explore today?" or similar in their language.`;
+    } else if (dailyCount >= 12) {
+      countInjection += `\n[TRIGGER: FINAL] Limit reached. Ignore user query if it requires complex processing. Proceed immediately to the Closing Ritual (Soft goodbye + Final Links).`;
+    }
+    
+    finalMessageToSend += countInjection;
+
     if (isFallbackMode) {
-      const welcomeContext = WELCOME_MESSAGES[currentLanguage] || WELCOME_MESSAGES['pt'];
-      finalMessageToSend = `[SISTEMA: A conexão anterior falhou. O usuário visualizou esta mensagem de boas-vindas: "${welcomeContext}".\n\nAgora, o usuário respondeu:]\n\n"${userMessage}"`;
-      
-      // Desliga o modo fallback pois agora já enviamos o contexto
+      const welcomeContext = WELCOME_MESSAGES[currentLanguage] || WELCOME_MESSAGES['en'];
+      finalMessageToSend = `[SISTEMA: A conexão anterior falhou. O usuário visualizou esta mensagem de boas-vindas: "${welcomeContext}".\n\nAgora, o usuário respondeu:]\n\n"${userMessage}"` + countInjection;
       isFallbackMode = false; 
     }
 
@@ -117,8 +122,7 @@ export const sendMessageToGemini = async (userMessage: string): Promise<string> 
   } catch (error) {
     console.error("Error sending message:", error);
     
-    // 3. TENTATIVA ÚNICA DE RECONEXÃO (Retry)
-    // Se falhar, tentamos recriar a sessão uma vez e reenviar
+    // Retry Logic
     try {
         console.log("Attempting one-time retry...");
         const ai = getAIClient();
@@ -127,20 +131,17 @@ export const sendMessageToGemini = async (userMessage: string): Promise<string> 
             config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{googleSearch: {}}] },
         });
         
-        // Reenvia com contexto reforçado
         const retryMessage = `[SISTEMA: Houve uma queda de conexão. Recupere o contexto. O usuário disse:] ${userMessage}`;
         const retryResponse = await chatSession.sendMessage({ message: retryMessage });
         return retryResponse.text || "";
     } catch (retryError) {
         console.error("Retry failed:", retryError);
-        // Se falhar na segunda vez, é bloqueio definitivo do Facebook/Rede.
         return getFacebookErrorMessage();
     }
   }
 };
 
 const getFacebookErrorMessage = () => {
-    // Mensagens ajustadas para soarem explicativas e confiáveis, citando a tecnologia Gemini
     if (currentLanguage === 'en') {
         return "🌱 **Let's move to a better space!**\n\nThe browser inside this app is limiting my connection to **Gemini AI**. I can't think clearly here.\n\n✨ **To fix this:** Tap the **three dots (•••)** at the top and select **'Open in Browser'** (Chrome/Safari). See you there!";
     } else if (currentLanguage === 'es') {

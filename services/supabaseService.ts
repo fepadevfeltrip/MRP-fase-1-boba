@@ -1,7 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
-import { Message, UserLocation, Language } from '../types';
 
-// Credenciais do Supabase
+import { createClient } from '@supabase/supabase-js';
+import { Message, UserLocation, Language, UserProfile } from '../types';
+
+// Credenciais do projeto
 const SUPABASE_PROJECT_ID = 'hronqtfzgyulvluduzjo';
 const SUPABASE_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co`;
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyb25xdGZ6Z3l1bHZsdWR1empvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxNzIxMDAsImV4cCI6MjA4NDc0ODEwMH0.xNqJzTuCBDn37hZyTVqqIii-igCGVxftwoLLaNNV9bA";
@@ -14,45 +15,129 @@ try {
   console.error("[Supabase] Failed to initialize client:", e);
 }
 
-export const verifyAccessCode = async (code: string): Promise<boolean> => {
-  // Normaliza para minúsculo para evitar problemas de Case Sensitivity (Ex: MEETINGSINRIO vs meetingsinrio)
-  const normalizedCode = code.trim().toLowerCase();
-  
-  // 1. Verificação Hardcoded (Backup imediato)
-  if (normalizedCode === 'meetingsinrio' || normalizedCode === 'embratur2026') {
-    return true;
-  }
+// --- Auth Functions ---
 
-  // 2. Verificação no Supabase via RPC (Função Segura)
-  // Isso impede que alguém liste todos os códigos da tabela.
-  if (!supabase) return false;
+export const signInWithMagicLink = async (email: string) => {
+    // --- BYPASS DE DESENVOLVIMENTO ---
+    // Permite testar o fluxo sem gastar cota de e-mail do Supabase
+    if (email.trim().toLowerCase() === 'demo@feltrip.com') {
+        return { data: { message: 'Demo Mode' }, error: null };
+    }
+    // ---------------------------------
 
-  try {
-    // Chama a função 'verify_access_code' que criamos no SQL
-    const { data, error } = await supabase.rpc('verify_access_code', { 
-      input_code: normalizedCode 
-    });
+    if (!supabase) return { error: { message: 'Client not initialized' } };
+    
+    try {
+        const { data, error } = await supabase.auth.signInWithOtp({
+            email: email.trim(),
+            options: {
+                // Removendo emailRedirectTo temporariamente para reduzir chance de erro de configuração,
+                // já que estamos focando no uso do Token numérico.
+                shouldCreateUser: true,
+            }
+        });
+        
+        if (error) console.error("Supabase Auth Error:", error);
+        return { data, error };
+    } catch (err: any) {
+        console.error("Unexpected Auth Error:", err);
+        return { data: null, error: err };
+    }
+};
 
-    if (error) {
-      // Se a função não existir no banco, tentamos o fallback antigo (menos seguro, mas funcional)
-      // apenas para não quebrar o app se o SQL não tiver sido rodado ainda.
-      console.warn("[Supabase] RPC error (SQL function might be missing), falling back to select:", error.message);
-      
-      const { data: tableData } = await supabase
-        .from('access_codes')
-        .select('code')
-        .eq('code', normalizedCode)
-        .maybeSingle();
-      
-      return !!tableData;
+export const verifyOtp = async (email: string, token: string) => {
+    // --- BYPASS DE DESENVOLVIMENTO ---
+    if (email.trim().toLowerCase() === 'demo@feltrip.com' && token === '123456') {
+        return { 
+            data: { 
+                user: { 
+                    id: 'demo-user-123', 
+                    email: 'demo@feltrip.com',
+                    user_metadata: { name: 'Viajante Demo' }
+                } 
+            }, 
+            error: null 
+        };
+    }
+    // ---------------------------------
+
+    if (!supabase) return { error: { message: 'Client not initialized' } };
+    
+    try {
+        // Verificação padrão via Token (Email)
+        const { data, error } = await supabase.auth.verifyOtp({
+            email: email.trim(),
+            token: token.trim(),
+            type: 'email'
+        });
+        
+        // Se falhar como login normal, tenta como signup (caso o usuário tenha acabado de criar a conta)
+        if (error) {
+             const retry = await supabase.auth.verifyOtp({
+                email: email.trim(),
+                token: token.trim(),
+                type: 'signup'
+            });
+            if (!retry.error) return { data: retry.data, error: null };
+        }
+        
+        return { data, error };
+    } catch (err: any) {
+        return { data: null, error: err };
+    }
+};
+
+export const signOut = async () => {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+};
+
+export const getUser = async () => {
+    if (!supabase) return null;
+    const { data } = await supabase.auth.getUser();
+    return data.user;
+};
+
+// --- Profile / Plan Functions ---
+
+export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
+    // Mock profile for Demo User
+    if (userId === 'demo-user-123') {
+        return {
+            id: userId,
+            email: "demo@feltrip.com",
+            subscription_tier: 'free', // Começa como free para testar o modal de planos
+            subscription_status: 'active',
+            created_at: new Date().toISOString()
+        };
     }
 
-    return !!data; // Retorna true se a função SQL retornou true
-  } catch (err) {
-    console.error("[Supabase] Unexpected verification error:", err);
-    return false;
-  }
+    if (!supabase) return null;
+    
+    try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+            
+        if (error) {
+            // Fallback silencioso se o perfil não existir ainda
+            return {
+                id: userId,
+                email: "",
+                subscription_tier: 'free',
+                subscription_status: 'none',
+                created_at: new Date().toISOString()
+            };
+        }
+        return data as UserProfile;
+    } catch (e) {
+        return null;
+    }
 };
+
+// --- Database Functions ---
 
 export const saveConversation = async (
   sessionId: string,
@@ -71,18 +156,11 @@ export const saveConversation = async (
   };
 
   try {
-    // Tenta salvar usando UPSERT (Inserir ou Atualizar)
     const { error } = await supabase
       .from('conversations')
       .upsert(fullPayload, { onConflict: 'id' });
-
-    if (error) {
-      console.error('[Supabase] Save failed. Check RLS policies.', error.message);
-    } else {
-      // Sucesso silencioso para não poluir o console
-    }
   } catch (err) {
-    console.error('[Supabase] Unexpected error during save:', err);
+    // console.error('[Supabase] Error saving:', err);
   }
 };
 
@@ -90,17 +168,12 @@ export const saveFeedback = async (sessionId: string, rating: number, comment: s
   if (!supabase) return;
 
   try {
-    // Tenta inserir na tabela 'feedbacks'
     const { error } = await supabase
       .from('feedbacks')
       .insert([
         { session_id: sessionId, rating, comment, created_at: new Date().toISOString() }
       ]);
-      
-    if (error) {
-        console.warn("[Supabase] Feedback insert failed (table might be missing?):", error.message);
-    }
   } catch (err) {
-    console.error('[Supabase] Unexpected feedback error:', err);
+    console.error('[Supabase] Feedback error:', err);
   }
 };

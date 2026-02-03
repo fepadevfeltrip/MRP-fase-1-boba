@@ -1,3 +1,4 @@
+
 export enum Role {
   USER = 'user',
   MODEL = 'model'
@@ -22,4 +23,15 @@ export interface UserLocation {
   city?: string;
   country_name?: string;
   ip?: string;
+}
+
+// Novos tipos para o sistema de Planos
+export type SubscriptionTier = 'free' | 'solo' | 'tribe' | 'immersion';
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  subscription_tier: SubscriptionTier;
+  subscription_status: 'active' | 'past_due' | 'canceled' | 'none';
+  created_at: string;
 }
