@@ -24,7 +24,10 @@ interface ErrorBoundaryState {
 
 // Fix: Simplified ErrorBoundary to ensure proper property inheritance and inference from React.Component
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  public state: ErrorBoundaryState = { hasError: false };
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
@@ -68,30 +71,6 @@ const getSessionId = () => {
   }
 };
 
-// --- DAILY LIMIT SYSTEM (Local) ---
-const checkDailyLimit = (): boolean => {
-    try {
-        const today = new Date().toDateString();
-        const storedDate = localStorage.getItem('boba_last_date');
-        const storedCount = parseInt(localStorage.getItem('boba_daily_count') || '0');
-
-        if (storedDate !== today) {
-            // New day, reset
-            localStorage.setItem('boba_last_date', today);
-            localStorage.setItem('boba_daily_count', '1'); // Counting the current one
-            return true;
-        } else {
-            if (storedCount >= 2) {
-                return false; // Limit reached
-            }
-            localStorage.setItem('boba_daily_count', (storedCount + 1).toString());
-            return true;
-        }
-    } catch (e) {
-        return true;
-    }
-};
-
 const AppContent: React.FC = () => {
   // Chat State
   const [messages, setMessages] = useState<Message[]>([]);
@@ -99,7 +78,6 @@ const AppContent: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [language, setLanguage] = useState<Language>('en'); 
   const [isConversationFinished, setIsConversationFinished] = useState(false);
-  const [limitReached, setLimitReached] = useState(false);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [pendingRestart, setPendingRestart] = useState(false);
@@ -122,20 +100,6 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (hasInitialized.current) return;
     hasInitialized.current = true;
-
-    // Check Limit before starting
-    const allowed = checkDailyLimit();
-    if (!allowed) {
-        setLimitReached(true);
-        setMessages([{
-            id: 'limit',
-            role: Role.MODEL,
-            text: ui.limitReached,
-            timestamp: Date.now()
-        }]);
-        setIsLoading(false);
-        return;
-    }
 
     const startConversation = async () => {
       try {
@@ -217,7 +181,7 @@ const AppContent: React.FC = () => {
 
   const handleSendMessage = useCallback(async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!input.trim() || isLoading || isConversationFinished || limitReached) return;
+    if (!input.trim() || isLoading || isConversationFinished) return;
     
     const userText = input;
     setInput('');
@@ -246,7 +210,7 @@ const AppContent: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, isConversationFinished, limitReached]);
+  }, [input, isLoading, isConversationFinished]);
 
   const handleRestartRequest = () => {
      setPendingRestart(true);
@@ -327,7 +291,6 @@ const AppContent: React.FC = () => {
       {/* Footer Input & Links */}
       <footer className="z-20 p-4 bg-[#F8F8F4]/95 backdrop-blur border-t border-[#006A71]/10">
         <div className="max-w-3xl mx-auto">
-          {!limitReached ? (
              <form 
                onSubmit={handleSendMessage}
                className="flex gap-2 items-center bg-white p-1.5 rounded-full border border-[#006A71]/20 focus-within:ring-2 focus-within:ring-[#006A71]/30"
@@ -348,11 +311,6 @@ const AppContent: React.FC = () => {
                  ➤
                </button>
              </form>
-          ) : (
-             <div className="text-center p-4 bg-gray-100 rounded-xl text-gray-500 text-sm">
-                {ui.limitReached}
-             </div>
-          )}
           
           <div className="mt-3 text-center space-y-1 flex justify-center items-center gap-4">
              <p className="text-[9px] text-gray-400">{ui.dataNotice}</p>
