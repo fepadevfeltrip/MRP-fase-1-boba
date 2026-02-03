@@ -23,7 +23,7 @@ interface ErrorBoundaryState {
 }
 
 // Fix: Simplified ErrorBoundary to ensure proper property inheritance and inference from React.Component
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
@@ -102,15 +102,21 @@ const AppContent: React.FC = () => {
     hasInitialized.current = true;
 
     const startConversation = async () => {
-      try {
-        const res = await fetch('https://ipapi.co/json/');
-        if (res.ok) {
-            const loc = await res.json();
+      // 1. Busca localização em segundo plano (sem travar o UI)
+      fetch('https://ipapi.co/json/')
+        .then(res => {
+            if (res.ok) return res.json();
+            throw new Error('Loc failed');
+        })
+        .then(loc => {
             userLocationRef.current = loc;
-        }
-      } catch (e) {}
+        })
+        .catch(() => {
+            // Silently fail, optional feature
+        });
 
       try {
+        // 2. Inicializa Chat Instantaneamente
         const initialGreeting = await initializeChat(language, false, userLocationRef.current);
         setMessages([{
           id: Date.now().toString(),
