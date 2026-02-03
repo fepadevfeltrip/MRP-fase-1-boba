@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, ErrorInfo, ReactNode } from 'react';
+import React, { useState, useEffect, useRef, useCallback, ErrorInfo, ReactNode, Component } from 'react';
 import { Message, Role, Language, UserLocation, UserProfile, LivingMarker, MarkerType } from './types';
 import { initializeChat, sendMessageToGemini, changeBotLanguage } from './services/geminiService';
 import { saveConversation, saveFeedback, getUser, getUserProfile, signOut, saveMarker, getMarkers, deleteMarker, updateMarker, subscribeToAuthChanges } from './services/supabaseService';
@@ -22,7 +22,7 @@ interface ErrorBoundaryState {
   error?: Error;
 }
 
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
@@ -174,6 +174,19 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
+
+  // --- SAVE CONVERSATION LOGIC (NOVO) ---
+  // Salva no Supabase sempre que houver novas mensagens
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveConversation(
+        sessionIdRef.current,
+        messages,
+        userLocationRef.current,
+        language
+      );
+    }
+  }, [messages, language]);
 
   // Restart Logic handling Feedback
   useEffect(() => {
