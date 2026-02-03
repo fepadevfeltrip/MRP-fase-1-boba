@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useRef, useCallback, ErrorInfo, ReactNode } from 'react';
+import React, { Component, useState, useEffect, useRef, useCallback, ErrorInfo, ReactNode } from 'react';
 import { Message, Role, Language, UserLocation, UserProfile, LivingMarker, MarkerType } from './types';
 import { initializeChat, sendMessageToGemini, changeBotLanguage } from './services/geminiService';
 import { saveConversation, saveFeedback, getUser, getUserProfile, signOut, saveMarker, getMarkers, deleteMarker, updateMarker, subscribeToAuthChanges } from './services/supabaseService';
@@ -24,7 +23,7 @@ interface ErrorBoundaryState {
 }
 
 // Fix: Simplified ErrorBoundary to ensure proper property inheritance and inference from React.Component
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   public state: ErrorBoundaryState = { hasError: false };
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
@@ -277,6 +276,14 @@ const AppContent: React.FC = () => {
           <div>
             <h1 className="text-xl font-bold text-[#006A71]">{ui.headerTitle}</h1>
             <p className="text-xs text-[#FF7D6B] font-bold uppercase">{ui.headerSubtitle}</p>
+            <a 
+              href="http://feltrip.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-[10px] text-[#006A71]/60 hover:text-[#006A71] block -mt-0.5 hover:underline"
+            >
+              feltrip.com
+            </a>
           </div>
         </div>
 
