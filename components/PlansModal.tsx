@@ -17,8 +17,8 @@ export const PlansModal: React.FC<PlansModalProps> = ({ isOpen, onClose, userPro
   const isPremium = userProfile?.subscription_tier === 'premium';
   const safeUi = ui || {};
 
-  // Link direto hardcoded (Corrigido)
-  const stripeUrl = "https://buy.stripe.com/bJe9ASb688Eo34Dgdi7ss0c";
+  // Pega o link do arquivo de constantes ou usa o fallback
+  const stripeUrl = STRIPE_LINKS.premium || "https://buy.stripe.com/bJe9ASb688Eo34Dgdi7ss0c";
 
   return (
     <div className="fixed inset-0 z-[2000] overflow-y-auto bg-black/90 backdrop-blur-md">
@@ -98,7 +98,7 @@ export const PlansModal: React.FC<PlansModalProps> = ({ isOpen, onClose, userPro
                        <span className="text-gray-400 text-sm font-medium ml-2">{safeUi.priceSub || "/mês"}</span>
                     </div>
                     
-                    {/* Botão de Link Direto (Sem target blank para evitar bloqueio) */}
+                    {/* Botão de Link Direto */}
                     <a 
                       href={stripeUrl}
                       className="block w-full text-center py-4 bg-[#FF007F] hover:bg-[#d4006a] text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all transform active:scale-95 text-lg no-underline cursor-pointer"

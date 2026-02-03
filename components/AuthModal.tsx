@@ -7,9 +7,10 @@ interface AuthModalProps {
   onClose: () => void;
   ui: any;
   onLoginSuccess: (user: any) => void;
+  isPremiumSignup?: boolean; // Novo prop para indicar que veio do Stripe
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, ui, onLoginSuccess }) => {
+export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, ui, onLoginSuccess, isPremiumSignup = false }) => {
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'email' | 'otp'>('email');
@@ -71,7 +72,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, ui, onLog
           setMessage('Código inválido ou expirado. Verifique os dígitos.');
       } else {
           onLoginSuccess(data.user);
-          onClose();
+          // Não fechamos aqui, o pai decide se fecha ou se processa o upgrade
       }
   };
 
@@ -91,9 +92,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, ui, onLog
         </button>
 
         <h3 className="text-xl font-bold text-[#006A71] mb-2 text-center relative z-10 tracking-tight">
-          {ui.loginTitle || "Login"}
+          {isPremiumSignup ? "Ativar Mapa Vivo" : (ui.loginTitle || "Login")}
         </h3>
-        <p className="text-xs text-center text-gray-500 mb-6">{ui.loginDesc || "Entre para acessar recursos premium."}</p>
+        
+        <p className="text-xs text-center text-gray-500 mb-6">
+            {isPremiumSignup 
+                ? "Pagamento detectado! Entre com seu e-mail para vincular sua assinatura Premium." 
+                : (ui.loginDesc || "Entre para acessar recursos premium.")}
+        </p>
 
         {step === 'email' ? (
             <form onSubmit={handleSendLink} className="relative z-10 flex flex-col gap-4">
@@ -151,7 +157,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, ui, onLog
                     disabled={isLoading}
                     className="w-full py-3 bg-[#006A71] text-white font-semibold rounded-full hover:bg-[#00555a] disabled:opacity-50 transition-colors shadow-md text-sm uppercase tracking-wide"
                 >
-                    {isLoading ? "Verificando..." : "Confirmar Código"}
+                    {isLoading ? "Verificando..." : (isPremiumSignup ? "Confirmar e Ativar" : "Confirmar Código")}
                 </button>
                 
                 {email === 'demo@feltrip.com' && (
