@@ -70,7 +70,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, ui, onLog
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-[#EAA823]/20 relative overflow-hidden">
         
         {/* Background blobs */}

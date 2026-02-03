@@ -1,6 +1,6 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { Message, UserLocation, Language, UserProfile } from '../types';
+import { Message, UserLocation, Language, UserProfile, LivingMarker, MarkerType } from '../types';
 
 // Credenciais do projeto
 const SUPABASE_PROJECT_ID = 'hronqtfzgyulvluduzjo';
@@ -15,11 +15,73 @@ try {
   console.error("[Supabase] Failed to initialize client:", e);
 }
 
+// --- Local Storage Helpers for Markers ---
+const LOCAL_MARKERS_KEY = 'boba_local_markers_v1';
+
+const getLocalMarkers = (): LivingMarker[] => {
+    try {
+        const stored = localStorage.getItem(LOCAL_MARKERS_KEY);
+        return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+        return [];
+    }
+};
+
+const saveLocalMarker = (marker: LivingMarker) => {
+    try {
+        const markers = getLocalMarkers();
+        // Remove se já existir (para update)
+        const filtered = markers.filter(m => m.id !== marker.id);
+        const updated = [...filtered, marker];
+        localStorage.setItem(LOCAL_MARKERS_KEY, JSON.stringify(updated));
+    } catch (e) {
+        console.error("Error saving local marker", e);
+    }
+};
+
+const removeLocalMarker = (markerId: string) => {
+    try {
+        const markers = getLocalMarkers();
+        const updated = markers.filter(m => m.id !== markerId);
+        localStorage.setItem(LOCAL_MARKERS_KEY, JSON.stringify(updated));
+    } catch (e) {
+        console.error("Error removing local marker", e);
+    }
+};
+
 // --- Auth Functions ---
+
+export const subscribeToAuthChanges = (callback: (user: any) => void) => {
+    if (!supabase) {
+        // Fallback: Check local storage for session if supabase fails
+        const localSession = localStorage.getItem('sb-hronqtfzgyulvluduzjo-auth-token');
+        if (localSession) {
+            try {
+                const parsed = JSON.parse(localSession);
+                callback(parsed.user);
+            } catch (e) { callback(null); }
+        }
+        return () => {};
+    }
+    
+    // Check current session immediately
+    supabase.auth.getSession().then(({ data: { session } }: any) => {
+        if (session?.user) {
+            callback(session.user);
+        }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: string, session: any) => {
+        callback(session?.user || null);
+    });
+
+    return () => {
+        subscription.unsubscribe();
+    };
+};
 
 export const signInWithMagicLink = async (email: string) => {
     // --- BYPASS DE DESENVOLVIMENTO ---
-    // Permite testar o fluxo sem gastar cota de e-mail do Supabase
     if (email.trim().toLowerCase() === 'demo@feltrip.com') {
         return { data: { message: 'Demo Mode' }, error: null };
     }
@@ -30,11 +92,7 @@ export const signInWithMagicLink = async (email: string) => {
     try {
         const { data, error } = await supabase.auth.signInWithOtp({
             email: email.trim(),
-            options: {
-                // Removendo emailRedirectTo temporariamente para reduzir chance de erro de configuração,
-                // já que estamos focando no uso do Token numérico.
-                shouldCreateUser: true,
-            }
+            options: { shouldCreateUser: true }
         });
         
         if (error) console.error("Supabase Auth Error:", error);
@@ -71,7 +129,6 @@ export const verifyOtp = async (email: string, token: string) => {
             type: 'email'
         });
         
-        // Se falhar como login normal, tenta como signup (caso o usuário tenha acabado de criar a conta)
         if (error) {
              const retry = await supabase.auth.verifyOtp({
                 email: email.trim(),
@@ -101,12 +158,11 @@ export const getUser = async () => {
 // --- Profile / Plan Functions ---
 
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
-    // Mock profile for Demo User
     if (userId === 'demo-user-123') {
         return {
             id: userId,
             email: "demo@feltrip.com",
-            subscription_tier: 'free', // Começa como free para testar o modal de planos
+            subscription_tier: 'premium', 
             subscription_status: 'active',
             created_at: new Date().toISOString()
         };
@@ -122,7 +178,7 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
             .single();
             
         if (error) {
-            // Fallback silencioso se o perfil não existir ainda
+            // Se não tiver perfil, cria um free temporário na memória
             return {
                 id: userId,
                 email: "",
@@ -160,7 +216,7 @@ export const saveConversation = async (
       .from('conversations')
       .upsert(fullPayload, { onConflict: 'id' });
   } catch (err) {
-    // console.error('[Supabase] Error saving:', err);
+    // Silently fail
   }
 };
 
@@ -176,4 +232,134 @@ export const saveFeedback = async (sessionId: string, rating: number, comment: s
   } catch (err) {
     console.error('[Supabase] Feedback error:', err);
   }
+};
+
+// --- Living Map Markers Functions (Hybrid Persistence) ---
+
+export const saveMarker = async (
+    userId: string, 
+    content: string, 
+    lat: number, 
+    lng: number, 
+    type: MarkerType
+): Promise<LivingMarker | null> => {
+    
+    // 1. Prepara o objeto marcador
+    const tempId = `local-${Date.now()}`;
+    const newMarker: LivingMarker = {
+        id: tempId,
+        user_id: userId,
+        content: content,
+        lat: lat,
+        lng: lng,
+        type: type,
+        created_at: new Date().toISOString()
+    };
+
+    // 2. Salva localmente IMEDIATAMENTE (Garante que o usuário vê)
+    saveLocalMarker(newMarker);
+
+    // 3. Tenta salvar no Supabase
+    if (supabase && userId !== 'demo-user-123') {
+        try {
+            // Remove o ID para que o banco gere um UUID real
+            const { id, ...payload } = newMarker;
+            
+            const { data, error } = await supabase
+                .from('living_markers')
+                .insert([payload])
+                .select()
+                .single();
+            
+            if (!error && data) {
+                // Sucesso: Remove o local (temp) e salva o oficial localmente também para cache
+                removeLocalMarker(tempId); 
+                saveLocalMarker(data); 
+                return data;
+            }
+        } catch (err) {
+            console.error("Supabase save failed, keeping local copy.", err);
+        }
+    }
+    
+    // Retorna o marcador (seja o do banco ou o local)
+    return newMarker;
+};
+
+export const updateMarker = async (
+    markerId: string,
+    content: string,
+    type: MarkerType
+): Promise<boolean> => {
+    // 1. Atualiza Local
+    const localMarkers = getLocalMarkers();
+    const target = localMarkers.find(m => m.id === markerId);
+    if (target) {
+        saveLocalMarker({ ...target, content, type });
+    }
+
+    // 2. Atualiza Supabase
+    if (!supabase || markerId.startsWith('local-')) return true;
+
+    try {
+        const { error } = await supabase
+            .from('living_markers')
+            .update({ content, type })
+            .eq('id', markerId);
+        return !error;
+    } catch (err) {
+        return false;
+    }
+};
+
+export const deleteMarker = async (markerId: string): Promise<boolean> => {
+    // 1. Remove Local
+    removeLocalMarker(markerId);
+
+    // 2. Remove Supabase
+    if (!supabase || markerId.startsWith('local-')) return true;
+
+    try {
+        const { error } = await supabase
+            .from('living_markers')
+            .delete()
+            .eq('id', markerId);
+        return !error;
+    } catch (err) {
+        return false;
+    }
+};
+
+export const getMarkers = async (userId: string): Promise<LivingMarker[]> => {
+    // 1. Carrega Locais
+    const localMarkers = getLocalMarkers().filter(m => m.user_id === userId);
+
+    // 2. Carrega Remotos
+    let remoteMarkers: LivingMarker[] = [];
+    if (supabase && userId !== 'demo-user-123') {
+        try {
+            const { data, error } = await supabase
+                .from('living_markers')
+                .select('*')
+                .eq('user_id', userId);
+            
+            if (data && !error) {
+                remoteMarkers = data;
+            }
+        } catch (err) {
+            console.error("Error fetching remote markers", err);
+        }
+    }
+
+    // 3. Merge (Prioridade para Remotos se ID coincidir, mas mantém Locais que não estão no remoto)
+    const remoteIds = new Set(remoteMarkers.map(m => m.id));
+    const uniqueLocals = localMarkers.filter(m => !remoteIds.has(m.id));
+    
+    // Combina tudo
+    const allMarkers = [...remoteMarkers, ...uniqueLocals];
+
+    // Salva o cache atualizado localmente
+    localStorage.setItem(LOCAL_MARKERS_KEY, JSON.stringify(allMarkers));
+
+    return allMarkers;
 };

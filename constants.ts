@@ -8,11 +8,8 @@ export const BOBA_AVATAR_URL = "https://drive.google.com/thumbnail?id=1A3eZgEeXG
 export const LANGUAGE_APP_URL = "https://example.com/seu-app-de-idiomas"; 
 
 // LINKS DE PAGAMENTO DO STRIPE
-// Gere os links no dashboard do Stripe (Products -> Create Payment Link) e cole aqui.
 export const STRIPE_LINKS = {
-  solo: "https://buy.stripe.com/00wfZgb68dYIgVt2ms7ss0b", 
-  tribe: "https://buy.stripe.com/bJe9ASb688Eo34Dgdi7ss0c", 
-  immersion: "https://buy.stripe.com/eVq8wOfmo07SgVt5yE7ss0d" 
+  premium: "https://buy.stripe.com/bJe9ASb688Eo34Dgdi7ss0c"
 };
 
 export const COLORS = {
@@ -26,171 +23,203 @@ export const COLORS = {
 export const UI_STRINGS = {
   pt: {
     headerTitle: "Feltrip",
-    headerSubtitle: "Boba • Inteligência Relacional",
-    inputPlaceholder: "Digite sua mensagem para Boba...",
-    disclaimer: "Gravamos a conversa para melhoria da experiência. Não retemos dados de contato.",
+    headerSubtitle: "Boba • Mapa Vivo",
+    inputPlaceholder: "Mapeie sua presença...",
+    disclaimer: "Gravamos a conversa para criar seu mapa.",
     send: "Enviar",
-    loading: "Conectando...",
+    loading: "Mapeando...",
     error: "Erro na conexão",
-    dataNotice: "Gravamos a conversa para melhoria da experiência. Não retemos dados de contato.",
-    limitReached: "Limite diário atingido. Volte amanhã!",
+    dataNotice: "Gravamos a conversa para melhoria da experiência.",
+    limitReached: "Limite diário atingido.",
+    limitReachedPremium: "Limite Premium atingido (50 msgs).",
     // Login / Plans
-    loginButton: "Entrar / Planos",
-    loginTitle: "Acesse sua conta Feltrip",
-    loginDesc: "Insira seu e-mail para receber o código de acesso.",
+    loginButton: "Mapa Vivo Premium",
+    loginTitle: "Acesse seu Mapa Vivo",
+    loginDesc: "Insira seu e-mail para resgatar suas memórias.",
     emailPlaceholder: "seu@email.com",
     sendMagicLink: "Enviar Código",
     checkEmail: "Verifique seu e-mail!",
-    magicLinkSent: "Enviamos um código para seu e-mail. Não clique no link, use o código.",
-    premiumBadge: "Membro Premium",
+    magicLinkSent: "Código enviado. Verifique seu e-mail.",
+    premiumBadge: "Membro Mapa Vivo",
+    planFreeName: "Visitante",
     logout: "Sair",
-    upgradeText: "Atingiu o limite? Evolua sua travessia.",
+    upgradeText: "Sua memória está cheia. Expanda seu Mapa.",
+    alreadyHaveAccount: "Já tem o Mapa Vivo? Entre aqui.",
     // Language App
-    openLanguageApp: "Meu Diário de Idiomas",
+    openLanguageApp: "Diário de Idiomas",
     languageAppTitle: "Feltrip Language Lab",
     // Feedback
-    feedbackTitle: "Como foi nossa conversa?",
-    feedbackPlaceholder: "Compartilhe o que sentiu (opcional)...",
-    submitFeedback: "Enviar Avaliação",
-    feedbackThanks: "Obrigada por compartilhar!",
+    feedbackTitle: "Como você se sentiu?",
+    feedbackPlaceholder: "Guarde uma nota emocional...",
+    submitFeedback: "Salvar no Mapa",
+    feedbackThanks: "Memória salva!",
     skip: "Pular",
     // Plans Page
-    plansTitle: "Escolha sua Travessia",
-    plansSubtitle: "Desbloqueie todo o potencial da inteligência cultural Boba.",
-    planCurrent: "Plano Atual",
+    plansTitle: "Mapa Vivo",
+    plansSubtitle: "Um mapa onde você guarda não só lugares, mas o jeito como você esteve neles.",
+    planCurrent: "Seu Plano Atual",
     planSelect: "Assinar Agora",
-    paymentNote: "Pagamentos processados via Stripe. Cancele quando quiser.",
-    planIntegrationAlert: "Você será redirecionado para o Stripe para assinar o plano: ",
-    // Plan Details
-    planFreeName: "Visitante",
-    planFreeFeatures: ["Limite de 12 msgs/dia", "Acesso Básico", "Memória de Sessão"],
-    planSoloName: "Solo",
-    planSoloFeatures: ["Mensagens Ilimitadas", "Dicas de Cultura Local", "Upload de fotos", "Suporte Prioritário"],
-    planTribeName: "Tribe",
-    planTribeFeatures: ["Tudo do Solo", "Acesso para 3 Pessoas", "Criação de Grupos", "Divisão Financeira", "Mapa Coletivo (Dicas da Boba)"],
-    planImmersionName: "Immersion",
-    planImmersionFeatures: ["Tudo do Tribe", "App de Idiomas (Voz/Texto)", "Prática: ES, PT, EN, ZH, FR"],
+    paymentNote: "Pagamento via Stripe. Cancele a qualquer momento.",
+    planIntegrationAlert: "Você será redirecionado para garantir seu Mapa Vivo.",
+    featuresTitle: "O que você desbloqueia:",
+    featureChat: "Conversa Boba Estendida (50 msgs/dia)",
+    featureMaps: "Integração Google Maps (Diário Vivo)",
+    featurePresence: "Mapeamento de Presença Relacional",
+    priceTag: "R$ 49,00",
+    priceSub: "/mês",
     // Platform Navigation
     navChat: "Boba Chat",
-    navGroups: "Grupos",
-    navFinance: "Financeiro",
+    navGroups: "Meu Mapa",
+    navFinance: "Diário",
     navPhotos: "Galeria",
-    featureComingSoon: "Em Desenvolvimento",
-    featureComingSoonDesc: "Estamos construindo essa funcionalidade para a sua tribo. Em breve disponível!"
+    featureComingSoon: "Em Breve",
+    featureComingSoonDesc: "Estamos integrando seu Mapa Vivo com o Google Maps.",
+    // Living Map & Pinning
+    pinButtonText: "Pinar no Mapa",
+    pinModalTitle: "Adicionar Nota Privada",
+    pinTagPresence: "Presença",
+    pinTagPlace: "Lugar",
+    pinTagCulture: "Cultura",
+    pinConfirm: "Salvar Nota",
+    pinCancel: "Cancelar",
+    mapViewTitle: "Seu Mapa Vivo",
+    searchPlaceholder: "Buscar endereço...",
+    privateNoteWarning: "🔒 Suas notas são completamente privadas",
+    formTitle: "Título",
+    formCategory: "Categoria",
+    formDesc: "Descrição (opcional)",
+    formPlaceholderTitle: "Ex: Café incrível em Botafogo",
+    formPlaceholderDesc: "Compartilhe mais detalhes sobre este momento..."
   },
   en: {
     headerTitle: "Feltrip",
-    headerSubtitle: "Boba • Relational Intelligence",
-    inputPlaceholder: "Type your message to Boba...",
-    disclaimer: "We record conversations to improve the experience. We do not retain contact data.",
+    headerSubtitle: "Boba • Living Map",
+    inputPlaceholder: "Map your presence...",
+    disclaimer: "We record conversations to build your map.",
     send: "Send",
-    loading: "Connecting...",
+    loading: "Mapping...",
     error: "Connection error",
-    dataNotice: "We record conversations to improve the experience. We do not retain contact data.",
-    limitReached: "Daily limit reached. Come back tomorrow!",
-    // Login / Plans
-    loginButton: "Login / Plans",
-    loginTitle: "Access your Feltrip account",
-    loginDesc: "Enter your email to receive the access code.",
+    dataNotice: "We record conversations to improve experience.",
+    limitReached: "Daily limit reached.",
+    limitReachedPremium: "Premium limit reached (50 msgs).",
+    loginButton: "Living Map Premium",
+    loginTitle: "Access your Living Map",
+    loginDesc: "Enter email to access your memories.",
     emailPlaceholder: "your@email.com",
     sendMagicLink: "Send Code",
-    checkEmail: "Check your email!",
-    magicLinkSent: "We sent a code to your email. Use the code, do not click the link.",
-    premiumBadge: "Premium Member",
+    checkEmail: "Check email!",
+    magicLinkSent: "Code sent. Check your email.",
+    premiumBadge: "Living Map Member",
+    planFreeName: "Guest",
     logout: "Logout",
-    upgradeText: "Limit reached? Upgrade your journey.",
-    // Language App
-    openLanguageApp: "My Language Diary",
+    upgradeText: "Memory full. Expand your Map.",
+    alreadyHaveAccount: "Have a Living Map? Login here.",
+    openLanguageApp: "Language Diary",
     languageAppTitle: "Feltrip Language Lab",
-    // Feedback
-    feedbackTitle: "How was our chat?",
-    feedbackPlaceholder: "Share your thoughts (optional)...",
-    submitFeedback: "Submit Feedback",
-    feedbackThanks: "Thank you for sharing!",
+    feedbackTitle: "How did you feel?",
+    feedbackPlaceholder: "Save an emotional note...",
+    submitFeedback: "Save to Map",
+    feedbackThanks: "Memory saved!",
     skip: "Skip",
-    // Plans Page
-    plansTitle: "Choose Your Journey",
-    plansSubtitle: "Unlock the full potential of Boba's cultural intelligence.",
+    plansTitle: "Living Map",
+    plansSubtitle: "A map where you keep not just places, but the way you were in them.",
     planCurrent: "Current Plan",
     planSelect: "Subscribe Now",
-    paymentNote: "Payments processed via Stripe. Cancel anytime.",
-    planIntegrationAlert: "You will be redirected to Stripe to subscribe to: ",
-    // Plan Details
-    planFreeName: "Visitor",
-    planFreeFeatures: ["Limit of 12 msgs/day", "Basic Access", "Session Memory"],
-    planSoloName: "Solo",
-    planSoloFeatures: ["Unlimited Messages", "Local Culture Tips", "Photo upload", "Priority Support"],
-    planTribeName: "Tribe",
-    planTribeFeatures: ["Everything in Solo", "Access for 3 People", "Create Travel Groups", "Split Expenses", "Collective Map (Boba's Tips)"],
-    planImmersionName: "Immersion",
-    planImmersionFeatures: ["Everything in Tribe", "Language App (Voice/Text)", "Practice: ES, PT, EN, ZH, FR"],
-    // Platform Navigation
+    paymentNote: "Payment via Stripe. Cancel anytime.",
+    planIntegrationAlert: "Redirecting to secure your Living Map.",
+    featuresTitle: "What you unlock:",
+    featureChat: "Extended Boba Conversation (50 msgs/day)",
+    featureMaps: "Google Maps Integration (Living Diary)",
+    featurePresence: "Relational Presence Mapping",
+    priceTag: "R$ 49.00",
+    priceSub: "/month",
     navChat: "Boba Chat",
-    navGroups: "Groups",
-    navFinance: "Finance",
+    navGroups: "My Map",
+    navFinance: "Diary",
     navPhotos: "Gallery",
-    featureComingSoon: "Under Construction",
-    featureComingSoonDesc: "We are building this feature for your tribe. Coming soon!"
+    featureComingSoon: "Coming Soon",
+    featureComingSoonDesc: "Integrating your Living Map with Google Maps.",
+    pinButtonText: "Pin to Map",
+    pinModalTitle: "Add Private Note",
+    pinTagPresence: "Presence",
+    pinTagPlace: "Place",
+    pinTagCulture: "Culture",
+    pinConfirm: "Save Note",
+    pinCancel: "Cancel",
+    mapViewTitle: "Your Living Map",
+    searchPlaceholder: "Search address...",
+    privateNoteWarning: "🔒 Your notes are completely private",
+    formTitle: "Title",
+    formCategory: "Category",
+    formDesc: "Description (optional)",
+    formPlaceholderTitle: "E.g., Great coffee shop",
+    formPlaceholderDesc: "Share more details about this moment..."
   },
   es: {
     headerTitle: "Feltrip",
-    headerSubtitle: "Boba • Inteligencia Relacional",
-    inputPlaceholder: "Escribe tu mensaje a Boba...",
-    disclaimer: "Grabamos las conversaciones para mejorar la experiencia. No retenemos datos de contacto.",
+    headerSubtitle: "Boba • Mapa Vivo",
+    inputPlaceholder: "Mapea tu presencia...",
+    disclaimer: "Grabamos conversaciones para crear tu mapa.",
     send: "Enviar",
-    loading: "Conectando...",
+    loading: "Mapeando...",
     error: "Error de conexión",
-    dataNotice: "Grabamos las conversaciones para mejorar la experiencia. No retenemos datos de contacto.",
-    limitReached: "Límite diario alcanzado. ¡Vuelve mañana!",
-    // Login / Plans
-    loginButton: "Entrar / Planes",
-    loginTitle: "Accede a tu cuenta Feltrip",
-    loginDesc: "Ingresa tu correo para recibir el código de acceso.",
+    dataNotice: "Grabamos conversaciones para mejorar la experiencia.",
+    limitReached: "Límite diario alcanzado.",
+    limitReachedPremium: "Límite Premium alcanzado (50 msgs).",
+    loginButton: "Mapa Vivo Premium",
+    loginTitle: "Accede a tu Mapa Vivo",
+    loginDesc: "Ingresa tu email para rescatar tus memorias.",
     emailPlaceholder: "tu@email.com",
     sendMagicLink: "Enviar Código",
     checkEmail: "¡Verifica tu correo!",
-    magicLinkSent: "Enviamos un código a tu correo. Usa el código, no el enlace.",
-    premiumBadge: "Miembro Premium",
-    logout: "Salir",
-    upgradeText: "¿Límite alcanzado? Mejora tu travesía.",
-    // Language App
-    openLanguageApp: "Mi Diario de Idiomas",
-    languageAppTitle: "Feltrip Language Lab",
-    // Feedback
-    feedbackTitle: "¿Qué tal nuestra charla?",
-    feedbackPlaceholder: "Comparte lo que sentiste (opcional)...",
-    submitFeedback: "Enviar Evaluación",
-    feedbackThanks: "¡Gracias por compartir!",
-    skip: "Saltar",
-    // Plans Page
-    plansTitle: "Elige tu Travesía",
-    plansSubtitle: "Desbloquea todo el potencial de la inteligencia cultural Boba.",
-    planCurrent: "Plan Actual",
-    planSelect: "Suscribirse",
-    paymentNote: "Pagos procesados vía Stripe. Cancela cuando quieras.",
-    planIntegrationAlert: "Serás redirigido a Stripe para suscribirte a: ",
-    // Plan Details
+    magicLinkSent: "Código enviado. Revisa tu correo.",
+    premiumBadge: "Miembro Mapa Vivo",
     planFreeName: "Visitante",
-    planFreeFeatures: ["Límite de 12 msgs/día", "Acceso Básico", "Memoria de Sesión"],
-    planSoloName: "Solo",
-    planSoloFeatures: ["Mensajes Ilimitados", "Tips de Cultura Local", "Subida de fotos", "Soporte Prioritario"],
-    planTribeName: "Tribe",
-    planTribeFeatures: ["Todo de Solo", "Acceso para 3 Personas", "Crear grupos de viaje", "División de gastos", "Mapa Colectivo (Tips de Boba)"],
-    planImmersionName: "Immersion",
-    planImmersionFeatures: ["Todo de Tribe", "App de Idiomas (Voz/Texto)", "Práctica: ES, PT, EN, ZH, FR"],
-    // Platform Navigation
+    logout: "Salir",
+    upgradeText: "Memoria llena. Expande tu Mapa.",
+    alreadyHaveAccount: "¿Ya tienes Mapa Vivo? Entra aquí.",
+    openLanguageApp: "Diario de Idiomas",
+    languageAppTitle: "Feltrip Language Lab",
+    feedbackTitle: "¿Cómo te sentiste?",
+    feedbackPlaceholder: "Guarda una nota emocional...",
+    submitFeedback: "Guardar en Mapa",
+    feedbackThanks: "¡Memoria guardada!",
+    skip: "Saltar",
+    plansTitle: "Mapa Vivo",
+    plansSubtitle: "Un mapa donde guardas no solo lugares, sino la forma en que estuviste en ellos.",
+    planCurrent: "Plan Actual",
+    planSelect: "Suscribirse Ahora",
+    paymentNote: "Pago vía Stripe. Cancela cuando quieras.",
+    planIntegrationAlert: "Redirigiendo para asegurar tu Mapa Vivo.",
+    featuresTitle: "Lo que desbloqueas:",
+    featureChat: "Conversación Extendida Boba (50 msgs/dia)",
+    featureMaps: "Integración Google Maps (Diario Vivo)",
+    featurePresence: "Mapeo de Presencia Relacional",
+    priceTag: "R$ 49,00",
+    priceSub: "/mes",
     navChat: "Chat Boba",
-    navGroups: "Grupos",
-    navFinance: "Finanzas",
+    navGroups: "Mi Mapa",
+    navFinance: "Diario",
     navPhotos: "Galería",
-    featureComingSoon: "En Construcción",
-    featureComingSoonDesc: "Estamos construyendo esta funcionalidad para tu tribu. ¡Pronto disponible!"
+    featureComingSoon: "Próximamente",
+    featureComingSoonDesc: "Estamos integrando tu Mapa Vivo con Google Maps.",
+    pinButtonText: "Pinear en Mapa",
+    pinModalTitle: "Agregar Nota Privada",
+    pinTagPresence: "Presencia",
+    pinTagPlace: "Lugar",
+    pinTagCulture: "Cultura",
+    pinConfirm: "Guardar Nota",
+    pinCancel: "Cancelar",
+    mapViewTitle: "Tu Mapa Vivo",
+    searchPlaceholder: "Buscar dirección...",
+    privateNoteWarning: "🔒 Tus notas son completamente privadas",
+    formTitle: "Título",
+    formCategory: "Categoría",
+    formDesc: "Descripción (opcional)",
+    formPlaceholderTitle: "Ej: Cafetería increíble",
+    formPlaceholderDesc: "Comparte más detalles sobre este momento..."
   }
 };
-
-// ==========================================
-// BASE DE CONHECIMENTO: LOGÍSTICA E GEMAS (RIO DE JANEIRO)
-// ==========================================
 
 const RIO_GUIDE = `
 ## **Gemas Gastronômicas do Rio de Janeiro**
@@ -204,7 +233,7 @@ O Rio é uma cidade cheia de sabores que vão muito além dos points turísticos
 - **Adega Pérola (Copacabana):** Petiscos clássicos de balcão.
 - **Pavão Azul (Copacabana):** Icônico, pataniscas e risoto de camarão.
 - **Bar do Momo (Tijuca):** Tradição carioca e bolinhos premiados.
-- **Bar do Bacana (Leblon):** Pé direito alto, clima descontraído.
+- **Bar do Bacana (Leblon):** Pé direito alto, clima de bairro.
 - **Mureta da Urca (Urca):** Pôr do sol. Obrigatório: empada de camarão do Bar Urca.
 
 ## **Logística e Segurança**
@@ -221,10 +250,6 @@ O Rio é uma cidade cheia de sabores que vão muito além dos points turísticos
 - **Preços:** Atenção ao "Gringo Price". Observe os locais. Nem tudo caro é golpe, mas fique atento.
 `;
 
-// ==========================================
-// BASE DE CONHECIMENTO: LOGÍSTICA E GEMAS (SÃO PAULO)
-// ==========================================
-
 const SP_GUIDE = `
 ## **Gemas Gastronômicas de São Paulo**
 - **Famiglia Mancini (Bixiga):** Clássico italiano, pratos gigantes, fila enorme (mas faz parte da experiência).
@@ -233,17 +258,13 @@ const SP_GUIDE = `
 - **Esther Rooftop (Centro):** Vista incrível da Praça da República.
 - **Bar do Luiz Fernandes (Zona Norte):** Boteco clássico, bolinhos lendários.
 - **Veloso Bar (Vila Mariana):** A melhor coxinha da cidade. Fila garantida.
-- **Bar Brahma (Centro/Ipiranga com São João):** Histórico, música ao vivo.
+- **Bar do Brahma (Centro/Ipiranga com São João):** Histórico, música ao vivo.
 
 ## **Logística**
 - **Transporte (Bilhete Único):** Integra Metrô, Trem (CPTM) e Ônibus. Compre em estações. Recarga via app (aceita crédito). Ônibus em SP NÃO aceita dinheiro, só Bilhete Único.
 - **Praias? Não.** Mas temos Parques: Ibirapuera (clássico), Villa-Lobos (esportes), Horto Florestal (natureza zona norte).
 - **Segurança:** Golpes em SP são rápidos (mão leve). Celular guardado no Centro.
 `;
-
-// ==========================================
-// CULTURA PROFUNDA (COMPARATIVO RIO X SP)
-// ==========================================
 
 const CULTURAL_DEEP_DIVE = `
 🗺️ **Base de Conhecimento Urbano: Segredos da Vida Carioca & Paulistana**
@@ -270,10 +291,6 @@ const CULTURAL_DEEP_DIVE = `
 
 🧠 **Resumo:** O carioca come para viver bem. O paulistano come para entender o mundo.
 `;
-
-// ==========================================
-// LISTA KIDS-FRIENDLY (SÃO PAULO & RIO DE JANEIRO)
-// ==========================================
 
 const KIDS_FRIENDLY_LIST = `
 ### 🧸 **Restaurantes com Espaço Kids / Foco Infantil em SP**
@@ -325,9 +342,12 @@ const KIDS_FRIENDLY_LIST = `
 - **Reservas:** especialmente em fins de semana ou datas comemorativas, reservar mesa ajuda a garantir lugar na área kids.
 `;
 
-// ==========================================
-// CURADORIA CULTURAL FELTRIP (ARTE & PRESENÇA)
-// ==========================================
+const ART_REFERENCES = `
+Ao criar as "Proposições Poéticas":
+1. **Yoko Ono (Grapefruit):** Estilo imperativo, simples e poético.
+2. **Nicolas Bourriaud (Estética Relacional):** Foco no encontro humano.
+3. **Fernanda Paixão:** Autonomia do sujeito e presença autêntica.
+`;
 
 const ART_CULTURE_GUIDE = `
 ### 📚 BASE DE CONHECIMENTO: CURADORIA CULTURAL FELTRIP (RIO & SP)
@@ -381,10 +401,6 @@ const ART_CULTURE_GUIDE = `
 * **Conexão Global:** Lembre que artistas brasileiros de ambas as cidades dominam a **SP-Arte** e a **Bienal**, com intercâmbio constante com Milão e Europa.
 `;
 
-// ==========================================
-// CONEXÃO RIO-SP (VIAGEM E LITORAL)
-// ==========================================
-
 const RIO_SP_CONNECTION = `
 ## **Travessia Rio-SP (Costa Verde & Litoral Norte)**
 
@@ -412,10 +428,6 @@ Qualquer lugar é lindo!
   - Fácil alugar barco para passear e parar em várias praias num dia.
 `;
 
-// ==========================================
-// CARNAVAL: GUIA ESPECIAL (RIO & SP)
-// ==========================================
-
 const CARNIVAL_SPECIAL = `
 🎊 **CARNAVAL: GUIA DE SOBREVIVÊNCIA E AGENDA**
 
@@ -429,10 +441,6 @@ const CARNIVAL_SPECIAL = `
   - *Exemplo:* Se o usuário fala inglês, não diga apenas "Veja o Instagram". Diga: "According to @blocosrj, the best block today is [Nome], which has a [Estilo] vibe. It starts at [Horário]."
 `;
 
-// ==========================================
-// BASE DE CONHECIMENTO: MAPA DA PRESENÇA RELACIONAL (MRP)
-// ==========================================
-
 const MRP_THEORY = `
 O Mapa da Presença Relacional é uma abordagem autoral desenvolvida pela Feltrip para compreender, mapear e cultivar a forma como uma pessoa está presente em si, no mundo e nas relações que constrói.
 Trata-se de um mapa inspirado na fenomenologia, especialmente nos pensamentos de Merleau-Ponty, Humberto Maturana e Francisco Varela.
@@ -443,13 +451,6 @@ Trata-se de um mapa inspirado na fenomenologia, especialmente nos pensamentos de
 3. IDENTIDADE: a narrativa que a pessoa constrói sobre si.
 4. RELAÇÃO COM O OUTRO: a qualidade dos encontros e trocas.
 5. RELAÇÃO COM O ESPAÇO DE VIDA E TRABALHO: como a pessoa habita os ambientes.
-`;
-
-const ART_REFERENCES = `
-Ao criar as "Proposições Poéticas":
-1. **Yoko Ono (Grapefruit):** Estilo imperativo, simples e poético.
-2. **Nicolas Bourriaud (Estética Relacional):** Foco no encontro humano.
-3. **Fernanda Paixão:** Autonomia do sujeito e presença autêntica.
 `;
 
 // ==========================================
@@ -488,34 +489,22 @@ FLUXO DA EXPERIÊNCIA E RITMO (CRÍTICO)
 - Se o usuário pedir uma dica direto (sem o Mapa), investigue rapidamente (Crianças? Silêncio/Caos?) antes de sugerir.
 - Use o Google Search (Mundo) ou Memória (Rio/SP) para dar a "Gema" perfeita.
 
-**OPÇÃO 3: HOSPITALIDADE**
-- Foco no anfitrião. Pergunte quem ele recebe antes de sugerir roteiros.
+========================
+CONSTRAINT: LIMITE DIÁRIO E O CONVITE PARA O MAPA VIVO
+========================
+O limite técnico gratuito é de 12 mensagens. 
 
-========================
-CONSTRAINT: LIMITE DIÁRIO E RITUAL DE FIM (10/12)
-========================
-O limite técnico é de 12 mensagens. Gerencie a expectativa.
+1. **MENSAGEM 10 (O ALERTA):** 
+   - Avise que a energia do dia está acabando, mas que nada precisa ser perdido.
 
-1. **MENSAGEM 10 (O ALERTA SUTIL):** 
-   - Ao responder a 10ª mensagem, adicione ao final: 
-   *"Nossa conexão diária é limitada e estamos quase no fim. Temos espaço para mais uma última troca ou pergunta especial. O que você quer priorizar agora?"*
-
-2. **MENSAGEM 12 (O ENCERRAMENTO LEVE):** 
-   - Se o usuário enviar a 12ª mensagem, não responda novas perguntas complexas.
-   - Como a Proposição Poética principal já foi entregue (na Opção 1), faça apenas um encerramento gentil e breve.
-   - Finalize com o link do WhatsApp.
-
-========================
-DIRETRIZ DE PRIVACIDADE E DADOS
-========================
-O aviso de privacidade já está incluído na mensagem de boas-vindas fixa. Não repita.
-Dados de localização (Cidade/País) são recebidos via metadados. Não revele que sabe, a menos que o usuário pergunte.
-
-========================
-HIERARQUIA DE CONHECIMENTO
-========================
-1. **MEMÓRIA INTERNA (Rio/SP):** Prioridade máxima para Rio e SP.
-2. **GOOGLE SEARCH (MUNDO):** Para o resto do mundo, busque por "authentic places", "hidden gems", "non-touristy" na cidade do usuário.
+2. **MENSAGEM 12 (O RITUAL DE PASSAGEM PARA O MAPA VIVO):** 
+   - Ao atingir o limite, você **DEVE** convidar a pessoa para o **"Mapa Vivo"**.
+   - Use o seguinte tom (adaptado ao idioma):
+     *"Nossa conversa de hoje termina aqui, mas ela não precisa desaparecer. Na Feltrip, criamos o **Mapa Vivo** — um mapa onde você guarda não só lugares, mas o jeito como você esteve neles."*
+   - Explique que o "Mapa Vivo" oferece:
+     1. Memória infinita (sem limites de conversa).
+     2. Integração com Google Maps para criar um diário geográfico das emoções vividas.
+   - Finalize convidando-a a clicar no botão de "Upgrade/Planos" (ou link que aparecerá na tela) para desbloquear esse acesso único por R$ 49,00.
 
 ========================
 BASE TEÓRICA: O MAPA DA PRESENÇA RELACIONAL (MRP)
@@ -540,8 +529,7 @@ ${ART_CULTURE_GUIDE}
 MENSAGEM FINAL PADRÃO
 ========================
 Sempre use ao encerrar:
-"Antes de encerrar... O que fizemos aqui foi um primeiro mapa...
+"Obrigada pela troca.
 👉 WhatsApp Feltrip: https://wa.me/message/BG24GCPKNF6KG1
-👉 Conheça nossa tecnologia social: https://feltrip.com
 Cuide da sua travessia."
 `;

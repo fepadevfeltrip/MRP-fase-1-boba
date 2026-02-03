@@ -1,17 +1,18 @@
 
 import React, { useState, useEffect, useRef, useCallback, ErrorInfo } from 'react';
-import { Message, Role, Language, UserLocation, UserProfile } from './types';
+import { Message, Role, Language, UserLocation, UserProfile, LivingMarker, MarkerType } from './types';
 import { initializeChat, sendMessageToGemini, changeBotLanguage } from './services/geminiService';
-import { saveConversation, saveFeedback, getUser, getUserProfile, signOut } from './services/supabaseService';
+import { saveConversation, saveFeedback, getUser, getUserProfile, signOut, saveMarker, getMarkers, deleteMarker, updateMarker, subscribeToAuthChanges } from './services/supabaseService';
 import { MessageBubble } from './components/MessageBubble';
 import { TypingIndicator } from './components/TypingIndicator';
 import { FeedbackModal } from './components/FeedbackModal';
 import { AuthModal } from './components/AuthModal';
 import { LanguageModal } from './components/LanguageModal';
 import { PlansModal } from './components/PlansModal';
+import { LivingMap } from './components/LivingMap';
 import { UI_STRINGS, BOBA_AVATAR_URL } from './constants';
 
-// --- Error Boundary Component (Para evitar tela branca) ---
+// --- Error Boundary Component ---
 interface ErrorBoundaryProps {
   children?: React.ReactNode;
 }
@@ -54,7 +55,6 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 }
 
-// --- Helper Functions ---
 const trackEvent = (eventName: string, params?: Record<string, any>) => {
   if (typeof window !== 'undefined' && (window as any).gtag) {
     (window as any).gtag('event', eventName, params);
@@ -75,7 +75,8 @@ const getSessionId = () => {
 };
 
 // --- Daily Usage Logic ---
-const DAILY_LIMIT = 12;
+const LIMIT_FREE = 12;
+const LIMIT_PREMIUM = 50;
 
 const getDailyUsage = (): number => {
   try {
@@ -87,7 +88,6 @@ const getDailyUsage = (): number => {
         return count;
       }
     }
-    // Se não houver data ou se a data for diferente, reseta
     localStorage.setItem('boba_daily_usage', JSON.stringify({ date: today, count: 0 }));
     return 0;
   } catch (e) {
@@ -107,12 +107,47 @@ const incrementDailyUsage = (): number => {
   }
 };
 
+// --- MEMORY SYSTEM (3 DAYS) ---
+const MEMORY_KEY = 'boba_chat_history_v2';
+const MEMORY_DURATION = 3 * 24 * 60 * 60 * 1000; // 3 dias em ms
+
+const saveMemory = (messages: Message[]) => {
+    try {
+        const payload = {
+            timestamp: Date.now(),
+            messages: messages
+        };
+        localStorage.setItem(MEMORY_KEY, JSON.stringify(payload));
+    } catch (e) {
+        console.error("Failed to save memory", e);
+    }
+};
+
+const loadMemory = (): Message[] | null => {
+    try {
+        const stored = localStorage.getItem(MEMORY_KEY);
+        if (!stored) return null;
+        
+        const { timestamp, messages } = JSON.parse(stored);
+        const now = Date.now();
+        
+        // Verifica se é mais recente que 3 dias
+        if (now - timestamp < MEMORY_DURATION) {
+            return messages;
+        } else {
+            localStorage.removeItem(MEMORY_KEY); // Limpa se expirou
+            return null;
+        }
+    } catch (e) {
+        return null;
+    }
+};
+
 const AppContent: React.FC = () => {
   // Chat State
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  // Default language is now English ('en')
   const [language, setLanguage] = useState<Language>('en'); 
   const [isConversationFinished, setIsConversationFinished] = useState(false);
   const [dailyCount, setDailyCount] = useState(0);
@@ -124,14 +159,18 @@ const AppContent: React.FC = () => {
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showPlansModal, setShowPlansModal] = useState(false);
   
-  // Platform View State (Para usuários Premium)
-  // 'chat' | 'groups' | 'finance' | 'photos'
-  const [currentView, setCurrentView] = useState('chat');
-
-  // Feedback State
-  const [showFeedback, setShowFeedback] = useState(false);
-  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  // Premium View State
+  const [currentView, setCurrentView] = useState('chat'); // 'chat' | 'map'
+  const [markers, setMarkers] = useState<LivingMarker[]>([]);
   
+  // Pinning Flow State (New)
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinTitle, setPinTitle] = useState('');
+  const [pinDesc, setPinDesc] = useState('');
+  const [selectedPinType, setSelectedPinType] = useState<MarkerType>('place');
+  const [pendingCoords, setPendingCoords] = useState<{lat: number, lng: number} | null>(null);
+  const [editingMarker, setEditingMarker] = useState<LivingMarker | null>(null);
+
   // Refs
   const sessionIdRef = useRef(getSessionId());
   const messagesRef = useRef<Message[]>([]);
@@ -139,160 +178,124 @@ const AppContent: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const userLocationRef = useRef<UserLocation | undefined>(undefined);
   
-  // Safe UI String Access with Fallback to English
   const ui = UI_STRINGS[language] || UI_STRINGS['en'];
 
-  const STORAGE_KEY = 'boba_conversation_completed_v1';
-
-  // Load Daily Count & User on Mount
+  // --- 1. Load User & Persist Login ---
   useEffect(() => {
     setDailyCount(getDailyUsage());
-    
-    const checkUser = async () => {
-        const user = await getUser();
+
+    // Listener para Auth State (Persistência)
+    const unsubscribe = subscribeToAuthChanges(async (user) => {
         if (user) {
             setCurrentUser(user);
             const profile = await getUserProfile(user.id);
             setUserProfile(profile);
-            trackEvent('user_logged_in', { tier: profile?.subscription_tier || 'unknown' });
+            
+            // Carrega marcadores
+            if (profile?.subscription_tier !== 'free') {
+                const loadedMarkers = await getMarkers(user.id);
+                setMarkers(loadedMarkers);
+            }
+        } else {
+            setCurrentUser(null);
+            setUserProfile(null);
+            setMarkers([]);
         }
+    });
+
+    return () => {
+        unsubscribe();
     };
-    checkUser();
   }, []);
 
-  // Sync Ref
-  useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
-
-  // Trigger Feedback
-  useEffect(() => {
-    if (isConversationFinished && !feedbackSubmitted) {
-      const timer = setTimeout(() => {
-          setShowFeedback(true);
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [isConversationFinished, feedbackSubmitted]);
-
-  // Scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading, currentView]);
-
-  const setFinishedInStorage = () => {
-    try {
-      localStorage.setItem(STORAGE_KEY, 'true');
-    } catch (e) {}
-  };
-
-  const handleResetMemory = () => {
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem('boba_daily_usage'); // Reseta a contagem diária também
-      sessionStorage.removeItem('boba_session_id');
-      trackEvent('reset_memory');
-      window.location.reload();
-    } catch (e) {
-      console.error("Failed to reset memory", e);
-    }
-  };
-
-  const handleLogout = async () => {
-      await signOut();
-      setCurrentUser(null);
-      setUserProfile(null);
-      window.location.reload();
-  };
-
-  // Sync to Supabase
-  useEffect(() => {
-    if (messages.length > 0) {
-      saveConversation(
-        sessionIdRef.current,
-        messages,
-        userLocationRef.current,
-        language
-      );
-    }
-  }, [messages, language]);
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && messagesRef.current.length > 0) {
-        saveConversation(
-          sessionIdRef.current,
-          messagesRef.current,
-          userLocationRef.current,
-          language
-        );
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [language]);
-
-  // Initialization
+  // --- 2. Memory System & Initialization ---
   useEffect(() => {
     if (hasInitialized.current) return;
     hasInitialized.current = true;
 
     const startConversation = async () => {
+      // Tenta pegar localização
       try {
-        const fetchLocation = async () => {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 1000); 
-            try {
-                const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
-                clearTimeout(timeoutId);
-                if (res.ok) return await res.json();
-            } catch (e) {
-                return undefined;
-            }
-        };
-        
-        const loc = await fetchLocation();
-        if (loc) {
+        const res = await fetch('https://ipapi.co/json/');
+        if (res.ok) {
+            const loc = await res.json();
             userLocationRef.current = loc;
-            trackEvent('user_location_detected', { city: loc.city });
         }
       } catch (e) {}
 
-      try {
-        const initialGreeting = await initializeChat(language, false, userLocationRef.current);
-        const initialMessage: Message = {
-          id: Date.now().toString(),
-          role: Role.MODEL,
-          text: initialGreeting,
-          timestamp: Date.now(),
-        };
-        setMessages([initialMessage]);
-        trackEvent('session_start', { language });
-      } catch (error) {
-        console.error("Error starting chat:", error);
-        setMessages([{
-           id: 'error',
-           role: Role.MODEL,
-           text: "Hi! I'm Boba. (Offline Mode). Please try reloading the page.",
-           timestamp: Date.now()
-        }]);
-      } finally {
-        setIsLoading(false);
+      // Tenta carregar memória de 3 dias
+      const memory = loadMemory();
+      if (memory && memory.length > 0) {
+          setMessages(memory);
+          setIsLoading(false);
+          // Opcional: Adicionar uma mensagem de sistema "Bem-vindo de volta"
+      } else {
+          // Inicia nova conversa se não tiver memória
+          try {
+            const initialGreeting = await initializeChat(language, false, userLocationRef.current);
+            const initialMessage: Message = {
+              id: Date.now().toString(),
+              role: Role.MODEL,
+              text: initialGreeting,
+              timestamp: Date.now(),
+            };
+            setMessages([initialMessage]);
+          } catch (error) {
+            setMessages([{
+               id: 'error',
+               role: Role.MODEL,
+               text: "Hi! I'm Boba. (Offline Mode). Please try reloading the page.",
+               timestamp: Date.now()
+            }]);
+          } finally {
+            setIsLoading(false);
+          }
       }
     };
 
     startConversation();
   }, [language]);
 
+  // --- 3. Save Memory on Change ---
+  useEffect(() => {
+    messagesRef.current = messages;
+    if (messages.length > 0) {
+        saveMemory(messages); // Salva no LocalStorage (3 dias)
+        // Salva no Supabase (Backup nuvem)
+        saveConversation(
+            sessionIdRef.current,
+            messages,
+            userLocationRef.current,
+            language
+        );
+    }
+  }, [messages, language]);
+
+  // Scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isLoading, currentView]);
+
+  const handleResetMemory = () => {
+    localStorage.removeItem(MEMORY_KEY); // Limpa a memória de 3 dias
+    localStorage.removeItem('boba_daily_usage');
+    sessionStorage.removeItem('boba_session_id');
+    window.location.reload();
+  };
+
+  const handleLogout = async () => {
+      await signOut();
+      setCurrentUser(null);
+      setUserProfile(null);
+      // Opcional: Limpar memória ao sair?
+      // localStorage.removeItem(MEMORY_KEY); 
+      window.location.reload();
+  };
+
   const handleLanguageChange = async (newLang: Language) => {
     if (language === newLang || isLoading) return;
-    
     setLanguage(newLang);
     setIsLoading(true);
-    trackEvent('language_change', { from: language, to: newLang });
-
     try {
       const responseText = await changeBotLanguage(newLang);
       if (responseText) {
@@ -304,29 +307,29 @@ const AppContent: React.FC = () => {
         }]);
       }
     } catch (error) {
-      console.error("Error changing language", error);
+      console.error(error);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const checkConversationCompletion = (text: string) => {
-    if (text.includes("wa.me/message/BG24GCPKNF6KG1")) {
-      setFinishedInStorage();
-      setIsConversationFinished(true);
-      trackEvent('conversation_completed', { sessionId: sessionIdRef.current });
     }
   };
 
   const handleSendMessage = useCallback(async (e?: React.FormEvent) => {
     e?.preventDefault();
     
-    // Se o usuário for Premium (não 'free'), o limite é ignorado.
+    // LIMIT LOGIC
     const isPremium = userProfile?.subscription_tier && userProfile.subscription_tier !== 'free';
-    const isBlocked = !isPremium && dailyCount >= DAILY_LIMIT;
+    const currentLimit = isPremium ? LIMIT_PREMIUM : LIMIT_FREE;
+    const isBlocked = dailyCount >= currentLimit;
 
     if (!input.trim() || isLoading || isConversationFinished) return;
-    if (isBlocked) return; 
+    
+    // Se bloqueado, abre modal de upgrade (se free) ou avisa limite premium
+    if (isBlocked) {
+        if (!isPremium) {
+            setShowPlansModal(true);
+        }
+        return; 
+    }
 
     const userText = input;
     setInput('');
@@ -339,22 +342,14 @@ const AppContent: React.FC = () => {
       timestamp: Date.now(),
     };
 
-    const newHistory = [...messages, userMessage];
-    setMessages(newHistory);
-    messagesRef.current = newHistory; 
-    saveConversation(sessionIdRef.current, newHistory, userLocationRef.current, language);
-    trackEvent('user_message_sent', { length: userText.length });
+    setMessages((prev) => [...prev, userMessage]);
+    trackEvent('user_message_sent');
 
-    // Increment Usage only if NOT premium (or increment but ignore limit)
     const currentUsage = incrementDailyUsage();
     setDailyCount(currentUsage);
 
     try {
-      // Passa a contagem diária para o serviço Gemini
-      // Se for Premium, passamos 0 para o prompt nunca disparar o aviso de limite.
-      const usageForPrompt = isPremium ? 0 : currentUsage;
-      
-      const responseText = await sendMessageToGemini(userText, usageForPrompt);
+      const responseText = await sendMessageToGemini(userText, currentUsage);
       
       setMessages((prev) => [...prev, {
         id: (Date.now() + 1).toString(),
@@ -363,93 +358,133 @@ const AppContent: React.FC = () => {
         timestamp: Date.now(),
       }]);
       
-      checkConversationCompletion(responseText);
-      trackEvent('ai_response_received', { response_length: responseText.length });
-
     } catch (err) {
       console.error(err);
-      setMessages((prev) => [...prev, {
-        id: 'err-' + Date.now(),
-        role: Role.MODEL,
-        text: "Oops! I tripped over some bits. Can you try sending that again?",
-        timestamp: Date.now()
-      }]);
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, isConversationFinished, language, messages, dailyCount, userProfile]);
+  }, [input, isLoading, isConversationFinished, language, dailyCount, userProfile]);
+
+  // --- PINNING & EDITING LOGIC ---
   
-  const handleFeedbackSubmit = async (rating: number, comment: string) => {
-    await saveFeedback(sessionIdRef.current, rating, comment);
-    setFeedbackSubmitted(true);
-    setShowFeedback(false);
-    trackEvent('feedback_submitted', { rating });
+  const handleMapClick = async (lat: number, lng: number) => {
+      setEditingMarker(null);
+      setPendingCoords({lat, lng});
+      setPinTitle('');
+      setPinDesc('');
+      setSelectedPinType('place');
+      setShowPinModal(true);
+  };
+
+  const handlePinMessage = (text: string) => {
+      setEditingMarker(null);
+      const lat = userLocationRef.current?.latitude || -22.9068;
+      const lng = userLocationRef.current?.longitude || -43.1729;
+      setPendingCoords({ lat, lng });
+      setPinTitle(''); 
+      setPinDesc(text); 
+      setSelectedPinType('presence');
+      setShowPinModal(true);
+      
+      // Se estiver no mobile, pode querer mudar a view para map automaticamente?
+      // setCurrentView('map');
+  };
+
+  const handleMarkerEdit = (marker: LivingMarker) => {
+      setEditingMarker(marker);
+      const parts = marker.content.split('\n');
+      const title = parts[0] || '';
+      const desc = parts.slice(1).join('\n') || '';
+      
+      setPinTitle(title);
+      setPinDesc(desc);
+      setSelectedPinType(marker.type);
+      setPendingCoords({ lat: marker.lat, lng: marker.lng }); 
+      setShowPinModal(true);
+  };
+
+  const savePin = async () => {
+      if (!currentUser || !pinTitle) return;
+      const content = `${pinTitle}\n${pinDesc}`;
+
+      if (editingMarker) {
+          // UPDATE
+          const success = await updateMarker(editingMarker.id, content, selectedPinType);
+          if (success) {
+              setMarkers(prev => prev.map(m => m.id === editingMarker.id ? { ...m, content, type: selectedPinType } : m));
+          }
+      } else if (pendingCoords) {
+          // CREATE
+          const newMarker = await saveMarker(currentUser.id, content, pendingCoords.lat, pendingCoords.lng, selectedPinType);
+          if (newMarker) {
+              setMarkers(prev => [...prev, newMarker]);
+          }
+      }
+
+      setShowPinModal(false);
+      setPendingCoords(null);
+      setEditingMarker(null);
+  };
+
+  const handleDeletePin = async () => {
+      if (editingMarker) {
+          if (window.confirm("Delete this note?")) {
+              const success = await deleteMarker(editingMarker.id);
+              if (success) {
+                  setMarkers(prev => prev.filter(m => m.id !== editingMarker.id));
+              }
+              setShowPinModal(false);
+              setEditingMarker(null);
+          }
+      }
   };
 
   const isPremium = userProfile?.subscription_tier && userProfile.subscription_tier !== 'free';
-  const isLimitReached = !isPremium && dailyCount >= DAILY_LIMIT;
-  const remainingMessages = Math.max(0, DAILY_LIMIT - dailyCount);
-  
-  // Verifica se é o tier mais alto (Immersion) para mostrar o botão do App de Idiomas
-  const isImmersionTier = userProfile?.subscription_tier === 'immersion';
+  const currentLimit = isPremium ? LIMIT_PREMIUM : LIMIT_FREE;
+  const isLimitReached = dailyCount >= currentLimit;
+  const remainingMessages = Math.max(0, currentLimit - dailyCount);
 
-  // --- RENDER LOGIC: CHAT INTERFACE ---
-  // Extraímos a interface do chat para reutilizar dentro ou fora do layout premium
+  // --- RENDER CHAT ---
   const renderChatInterface = () => (
     <div className="flex flex-col h-full relative">
-       {/* Background (only if not in platform mode, or we can keep it consistent) */}
+       {/* Background */}
        {!isPremium && (
           <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-40 overflow-hidden z-0">
              <div className="absolute top-[-5%] right-[-5%] w-[400px] h-[400px] bg-[#FF7D6B] rounded-full blur-[80px]"></div>
              <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#006A71] rounded-full blur-[100px] opacity-30"></div>
-             <div className="absolute top-[40%] left-[20%] w-[200px] h-[200px] bg-[#EAA823] rounded-full blur-[90px] opacity-20"></div>
           </div>
        )}
 
-      <header className={`z-10 flex flex-col sm:flex-row items-center justify-between px-6 py-4 bg-[#F8F8F4]/90 backdrop-blur-md border-b border-[#EAA823]/20 sticky top-0 shadow-sm gap-2 ${isPremium ? 'rounded-t-3xl sm:rounded-none' : ''}`}>
-        <div className="flex items-center gap-3 mb-3 sm:mb-0">
-          <div className="relative w-12 h-12 rounded-full border-2 border-[#FF007F] p-0.5 bg-white overflow-hidden shadow-md">
+      <header className={`z-10 flex flex-col sm:flex-row items-center justify-between px-6 py-4 bg-[#F8F8F4]/90 backdrop-blur-md border-b border-[#EAA823]/20 sticky top-0 shadow-sm gap-2`}>
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-full border-2 border-[#FF007F] p-0.5 bg-white overflow-hidden shadow-md">
             <img src={BOBA_AVATAR_URL} alt="Boba" className="w-full h-full object-cover rounded-full" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-[#006A71] tracking-tight">{ui.headerTitle}</h1>
-            <p className="text-xs text-[#FF7D6B] font-bold tracking-wide uppercase">{ui.headerSubtitle}</p>
+            <h1 className="text-xl font-bold text-[#006A71]">{ui.headerTitle}</h1>
+            <p className="text-xs text-[#FF7D6B] font-bold uppercase">{ui.headerSubtitle}</p>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center gap-2">
-           {/* Botão de Login / Perfil */}
+        <div className="flex items-center gap-2">
            {currentUser ? (
                <div className="flex items-center gap-3">
-                   {/* Botão do App de Idiomas (Só aparece para o plano Immersion) */}
-                   {isImmersionTier && (
-                       <button
-                           onClick={() => setShowLanguageModal(true)}
-                           className="flex items-center gap-1 px-3 py-1.5 bg-[#EAA823]/20 hover:bg-[#EAA823]/30 text-[#006A71] text-xs font-bold rounded-full transition-colors border border-[#EAA823]/40"
-                       >
-                           <span className="text-sm">🗣️</span> {ui.openLanguageApp}
-                       </button>
-                   )}
-
                    <div className="flex flex-col items-end cursor-pointer" onClick={() => setShowPlansModal(true)}>
                        <span className="text-xs font-bold text-[#006A71] hover:underline">{isPremium ? ui.premiumBadge : ui.planFreeName}</span>
                        <button onClick={handleLogout} className="text-[10px] text-gray-400 hover:text-red-500 underline">{ui.logout}</button>
                    </div>
-                   {isPremium && (
-                       <div className="w-2 h-2 rounded-full bg-[#EAA823] shadow-glow" title="Premium Active"></div>
-                   )}
+                   {isPremium && <div className="w-2 h-2 rounded-full bg-[#EAA823] shadow-glow" title="Premium Active"></div>}
                </div>
            ) : (
                 <button 
-                  onClick={() => setShowAuthModal(true)}
+                  onClick={() => setShowPlansModal(true)}
                   className="px-4 py-1.5 bg-[#006A71]/10 hover:bg-[#006A71]/20 text-[#006A71] text-xs font-bold rounded-full transition-colors border border-[#006A71]/30"
                 >
                   {ui.loginButton}
                 </button>
            )}
 
-            <div className="flex bg-white rounded-full p-1 border border-[#006A71]/20 shadow-sm mt-2 sm:mt-0">
-            {/* Reordenação: English First */}
+            <div className="flex bg-white rounded-full p-1 border border-[#006A71]/20 shadow-sm">
             {(['en', 'pt', 'es'] as Language[]).map((lang) => (
                 <button 
                 key={lang}
@@ -467,15 +502,13 @@ const AppContent: React.FC = () => {
       <main className="flex-1 overflow-y-auto p-4 sm:p-6 z-10 scroll-smooth">
         <div className="max-w-3xl mx-auto flex flex-col min-h-full">
           {messages.map((msg) => (
-            <MessageBubble key={msg.id} message={msg} />
+            <MessageBubble 
+                key={msg.id} 
+                message={msg} 
+                onPin={isPremium ? handlePinMessage : undefined}
+            />
           ))}
-          
-          {isLoading && (
-            <div className="mb-6">
-               <TypingIndicator />
-            </div>
-          )}
-          
+          {isLoading && <div className="mb-6"><TypingIndicator /></div>}
           <div ref={messagesEndRef} />
         </div>
       </main>
@@ -484,161 +517,198 @@ const AppContent: React.FC = () => {
         <div className="max-w-3xl mx-auto">
           <form 
             onSubmit={handleSendMessage}
-            className="flex gap-2 items-center bg-white p-1.5 rounded-full border border-[#006A71]/20 focus-within:ring-2 focus-within:ring-[#006A71]/30 focus-within:border-[#006A71] transition-all shadow-sm"
+            className="flex gap-2 items-center bg-white p-1.5 rounded-full border border-[#006A71]/20 focus-within:ring-2 focus-within:ring-[#006A71]/30"
           >
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={isLimitReached ? (ui.upgradeText || "Upgrade needed.") : (isConversationFinished ? "Chat finished" : `${ui.inputPlaceholder} ${!isPremium ? `(${remainingMessages})` : '∞'}`)}
+              placeholder={isLimitReached ? (isPremium ? ui.limitReachedPremium : ui.upgradeText) : `${ui.inputPlaceholder} (${remainingMessages})`}
               disabled={isLoading || isConversationFinished || isLimitReached}
-              className="flex-1 bg-transparent px-4 py-3 outline-none text-[#006A71] placeholder-gray-400 disabled:opacity-50 disabled:text-gray-400"
+              className="flex-1 bg-transparent px-4 py-3 outline-none text-[#006A71] placeholder-gray-400 disabled:opacity-50"
             />
             <button
-              type="submit"
-              disabled={!input.trim() || isLoading || isConversationFinished || isLimitReached}
-              className="p-3 bg-[#FF007F] text-white rounded-full hover:bg-[#d4006a] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-md flex items-center justify-center"
-              aria-label={ui.send}
+              type={isLimitReached && !isPremium ? "button" : "submit"}
+              onClick={(e) => {
+                  if (isLimitReached && !isPremium) {
+                      e.preventDefault();
+                      setShowPlansModal(true);
+                  }
+              }}
+              disabled={(!input.trim() && !isLimitReached) || isLoading || isConversationFinished}
+              className="p-3 bg-[#FF007F] text-white rounded-full hover:bg-[#d4006a] disabled:bg-gray-300 shadow-md"
             >
-              {isLimitReached ? (
-                  <span className="text-[10px] font-bold px-1" onClick={() => setShowPlansModal(true)}>UP</span> 
-              ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 translate-x-0.5">
-                    <path d="M3.478 2.404a.75.75 0 00-.926.941l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.404z" />
-                  </svg>
-              )}
+              {isLimitReached && !isPremium ? <span className="text-[10px] font-bold px-1">UP</span> : "➤"}
             </button>
           </form>
-          <p className="text-center text-[10px] text-[#006A71]/60 mt-2 font-medium">
-            {ui.disclaimer}
-          </p>
-          <button 
-            onClick={handleResetMemory}
-            className="block mx-auto mt-2 text-[8px] text-gray-300 hover:text-red-400 uppercase tracking-widest transition-colors"
-          >
-            Reset Memory (Dev)
+          <button onClick={handleResetMemory} className="block mx-auto mt-2 text-[8px] text-gray-300 hover:text-red-400 uppercase tracking-widest">
+            Reset Memory
           </button>
         </div>
       </footer>
     </div>
   );
 
-  // --- RENDER LOGIC: COMING SOON ---
-  const renderComingSoon = (featureName: string) => (
-    <div className="flex flex-col h-full items-center justify-center text-center p-8 bg-[#F8F8F4] relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-20">
-             <div className="absolute top-[-10%] right-[-10%] w-[400px] h-[400px] bg-[#EAA823] rounded-full blur-[80px]"></div>
-             <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#006A71] rounded-full blur-[100px]"></div>
-        </div>
-        <div className="z-10 bg-white/80 backdrop-blur-md p-10 rounded-3xl border border-[#006A71]/10 shadow-xl max-w-md">
-            <div className="text-6xl mb-6">🚧</div>
-            <h2 className="text-2xl font-bold text-[#006A71] mb-2">{featureName}</h2>
-            <h3 className="text-sm font-bold text-[#EAA823] uppercase tracking-wider mb-6">{ui.featureComingSoon || "Em Construção"}</h3>
-            <p className="text-gray-600 leading-relaxed">
-                {ui.featureComingSoonDesc || "Estamos construindo essa funcionalidade para sua tribo."}
-            </p>
-            <button 
-                onClick={() => setCurrentView('chat')}
-                className="mt-8 px-6 py-2 bg-[#006A71] text-white rounded-full text-sm font-semibold hover:bg-[#00555a] transition-colors"
-            >
-                Voltar para Boba
-            </button>
-        </div>
-    </div>
-  );
+  // --- MAIN RENDER ---
 
-  // --- RENDER LOGIC: MAIN APP ---
-  
-  // Se for Free User, renderiza apenas o Chat (Site da Boba)
+  // Modo Free: Chat Fullscreen
   if (!isPremium) {
       return (
-        <div className="flex flex-col h-screen bg-[#F8F8F4] relative overflow-hidden font-sans text-slate-800">
+        <div className="flex flex-col h-screen bg-[#F8F8F4] font-sans text-slate-800" style={{ height: '100dvh' }}>
            {renderChatInterface()}
-           
-           {/* Modais Globais */}
-           {showFeedback && <FeedbackModal isOpen={showFeedback} onClose={() => setShowFeedback(false)} onSubmit={handleFeedbackSubmit} ui={ui} />}
+           {/* Modals */}
            {showAuthModal && <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} ui={ui} onLoginSuccess={(user) => { setCurrentUser(user); getUserProfile(user.id).then((profile) => { setUserProfile(profile); setShowAuthModal(false); setShowPlansModal(true); }); }} />}
-           {showPlansModal && <PlansModal isOpen={showPlansModal} onClose={() => setShowPlansModal(false)} userProfile={userProfile} ui={ui} />}
-           {showLanguageModal && <LanguageModal isOpen={showLanguageModal} onClose={() => setShowLanguageModal(false)} ui={ui} />}
+           {showPlansModal && <PlansModal isOpen={showPlansModal} onClose={() => setShowPlansModal(false)} userProfile={userProfile} ui={ui} onLoginClick={() => { setShowPlansModal(false); setShowAuthModal(true); }} />}
         </div>
       );
   }
 
-  // Se for Premium, renderiza o Layout da Plataforma (Sidebar + Content)
+  // Modo Premium: Split View (Chat + Map)
   return (
-    <div className="flex h-screen bg-[#F8F8F4] font-sans text-slate-800 overflow-hidden">
-        {/* Sidebar */}
-        <aside className="w-20 lg:w-64 bg-[#006A71] text-white flex flex-col items-center lg:items-start py-6 border-r border-[#EAA823]/20 shadow-2xl z-50">
-            <div className="mb-8 px-4 flex items-center gap-3">
-                 <div className="w-10 h-10 rounded-full bg-white p-0.5 overflow-hidden border-2 border-[#EAA823]">
-                     <img src={BOBA_AVATAR_URL} alt="Boba" className="w-full h-full object-cover rounded-full" />
-                 </div>
-                 <span className="hidden lg:block font-bold text-xl tracking-tight">Feltrip</span>
+    <div className="flex h-screen bg-[#F8F8F4] font-sans text-slate-800 overflow-hidden" style={{ height: '100dvh' }}>
+        {/* Sidebar Mini (Navigation) */}
+        <aside className="w-16 bg-[#006A71] text-white flex flex-col items-center py-6 z-50 shadow-2xl shrink-0">
+            <div className="mb-6 w-10 h-10 rounded-full bg-white p-0.5 border-2 border-[#EAA823] overflow-hidden">
+                <img src={BOBA_AVATAR_URL} alt="Boba" className="w-full h-full object-cover" />
             </div>
-
-            <nav className="flex-1 w-full px-2 space-y-2">
+            
+            <nav className="flex-1 flex flex-col gap-4 w-full px-2">
+                {/* Chat Button */}
                 <button 
-                    onClick={() => setCurrentView('chat')}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${currentView === 'chat' ? 'bg-white/10 text-[#EAA823] font-bold' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}
+                   onClick={() => setCurrentView('chat')} 
+                   className={`p-3 rounded-xl transition-all flex flex-col items-center gap-1 ${currentView === 'chat' ? 'bg-white/20 text-[#EAA823]' : 'text-white/70 hover:bg-white/10'}`}
+                   title="Chat"
                 >
-                    <span className="text-xl">💬</span>
-                    <span className="hidden lg:block text-sm">{ui.navChat || "Chat"}</span>
+                   <span className="text-xl">💬</span>
                 </button>
 
+                {/* Map Button (Visible on all screens, essential for mobile) */}
                 <button 
-                    onClick={() => setCurrentView('groups')}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${currentView === 'groups' ? 'bg-white/10 text-[#EAA823] font-bold' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}
+                   onClick={() => setCurrentView('map')} 
+                   className={`p-3 rounded-xl transition-all flex flex-col items-center gap-1 ${currentView === 'map' ? 'bg-white/20 text-[#EAA823]' : 'text-white/70 hover:bg-white/10'}`}
+                   title="Map"
                 >
-                    <span className="text-xl">🌍</span>
-                    <span className="hidden lg:block text-sm">{ui.navGroups || "Groups"}</span>
-                </button>
-
-                <button 
-                    onClick={() => setCurrentView('finance')}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${currentView === 'finance' ? 'bg-white/10 text-[#EAA823] font-bold' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}
-                >
-                    <span className="text-xl">💸</span>
-                    <span className="hidden lg:block text-sm">{ui.navFinance || "Finance"}</span>
-                </button>
-
-                <button 
-                    onClick={() => setCurrentView('photos')}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${currentView === 'photos' ? 'bg-white/10 text-[#EAA823] font-bold' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}
-                >
-                    <span className="text-xl">📸</span>
-                    <span className="hidden lg:block text-sm">{ui.navPhotos || "Photos"}</span>
+                   <span className="text-xl">🗺️</span>
                 </button>
             </nav>
-
-            <div className="mt-auto w-full px-4">
-                 <div className="bg-[#00555a] rounded-xl p-3 text-center mb-4 hidden lg:block">
-                     <p className="text-[10px] text-white/60 uppercase font-bold tracking-widest mb-1">{ui.planCurrent}</p>
-                     <p className="text-xs font-bold text-[#EAA823] uppercase">{userProfile?.subscription_tier}</p>
-                 </div>
-                 <button onClick={handleLogout} className="text-xs text-white/50 hover:text-red-300 w-full text-center lg:text-left px-2">
-                     {ui.logout}
-                 </button>
-            </div>
+            
+            <button onClick={handleLogout} className="mt-auto text-white/50 hover:text-red-300 text-xs">Exit</button>
         </aside>
 
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col h-full relative overflow-hidden bg-white sm:rounded-l-3xl shadow-inner">
-            {currentView === 'chat' && renderChatInterface()}
-            {currentView === 'groups' && renderComingSoon(ui.navGroups || "Groups")}
-            {currentView === 'finance' && renderComingSoon(ui.navFinance || "Finance")}
-            {currentView === 'photos' && renderComingSoon(ui.navPhotos || "Photos")}
+        {/* Split Content */}
+        <div className="flex-1 flex flex-col md:flex-row h-full relative overflow-hidden">
+            
+            {/* Left: Chat (Mobile: Only visible if view='chat') */}
+            <div className={`w-full md:w-[40%] h-full border-r border-gray-200 bg-white absolute inset-0 md:relative z-10 transition-transform duration-300 ease-in-out ${currentView === 'chat' ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+                {renderChatInterface()}
+            </div>
+
+            {/* Right: Living Map (Mobile: Only visible if view='map') */}
+            <div className={`w-full md:w-[60%] h-full relative absolute inset-0 md:relative z-0 ${currentView === 'map' ? 'block' : 'hidden md:block'}`}>
+                <LivingMap 
+                    markers={markers} 
+                    userLocation={userLocationRef.current} 
+                    ui={ui} 
+                    onMapClick={handleMapClick}
+                    onMarkerEdit={handleMarkerEdit}
+                />
+            </div>
         </div>
 
-        {/* Modais Globais (Repetidos aqui para garantir contexto) */}
-        {showFeedback && <FeedbackModal isOpen={showFeedback} onClose={() => setShowFeedback(false)} onSubmit={handleFeedbackSubmit} ui={ui} />}
-        {showAuthModal && <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} ui={ui} onLoginSuccess={(user) => { setCurrentUser(user); getUserProfile(user.id).then((profile) => { setUserProfile(profile); setShowAuthModal(false); setShowPlansModal(true); }); }} />}
+        {/* New Pin Modal (Form Style) */}
+        {showPinModal && (
+            <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+                <div className="bg-white rounded-[20px] w-full max-w-sm shadow-2xl relative overflow-hidden flex flex-col">
+                    
+                    {/* Header with Close */}
+                    <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center">
+                        <div className="flex items-center gap-2 text-[#006A71]">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                            <h3 className="text-lg font-bold">{editingMarker ? "Edit Note" : ui.pinModalTitle}</h3>
+                        </div>
+                        <button onClick={() => setShowPinModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-6 space-y-5">
+                        {/* Title Input - Explicit BG and Text Color */}
+                        <div>
+                            <label className="block text-xs font-bold text-[#006A71] uppercase mb-1.5 ml-1">{ui.formTitle} *</label>
+                            <input 
+                                type="text"
+                                value={pinTitle}
+                                onChange={(e) => setPinTitle(e.target.value)}
+                                placeholder={ui.formPlaceholderTitle}
+                                className="w-full p-3 rounded-xl border border-[#006A71]/20 text-sm bg-white text-gray-900 focus:border-[#006A71] focus:ring-1 focus:ring-[#006A71] outline-none"
+                                autoFocus
+                            />
+                        </div>
+
+                        {/* Category Dropdown (Simulated with Buttons for UX) */}
+                        <div>
+                            <label className="block text-xs font-bold text-[#006A71] uppercase mb-1.5 ml-1">{ui.formCategory}</label>
+                            <div className="flex bg-gray-50 rounded-xl p-1 border border-gray-200">
+                                {(['presence', 'place', 'culture'] as MarkerType[]).map(type => (
+                                    <button
+                                        key={type}
+                                        onClick={() => setSelectedPinType(type)}
+                                        className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all capitalize ${selectedPinType === type ? 'bg-white text-[#006A71] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                                    >
+                                        {ui[`pinTag${type.charAt(0).toUpperCase() + type.slice(1)}` as keyof typeof ui] || type}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Description - Explicit BG and Text Color */}
+                        <div>
+                            <label className="block text-xs font-bold text-[#006A71] uppercase mb-1.5 ml-1">{ui.formDesc}</label>
+                            <textarea 
+                                value={pinDesc}
+                                onChange={(e) => setPinDesc(e.target.value)}
+                                placeholder={ui.formPlaceholderDesc}
+                                className="w-full p-3 rounded-xl border border-[#006A71]/20 text-sm bg-white text-gray-900 focus:border-[#006A71] focus:ring-1 focus:ring-[#006A71] outline-none resize-none h-24"
+                            />
+                        </div>
+
+                        {/* Privacy Warning */}
+                        <div className="bg-[#EAA823]/10 text-[#EAA823] text-xs font-medium px-4 py-2 rounded-lg flex items-center gap-2">
+                             <span>{ui.privateNoteWarning}</span>
+                        </div>
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="px-6 py-4 bg-gray-50 flex gap-3">
+                         {/* Delete Button (Only in Edit Mode) */}
+                        {editingMarker && (
+                            <button 
+                                onClick={handleDeletePin}
+                                className="px-4 py-3 text-red-500 font-bold text-sm bg-white border border-red-100 rounded-xl hover:bg-red-50"
+                                title="Delete Note"
+                            >
+                                🗑️
+                            </button>
+                        )}
+                        
+                        <button onClick={() => setShowPinModal(false)} className="flex-1 py-3 text-gray-500 font-bold text-sm bg-white border border-gray-200 rounded-xl hover:bg-gray-100">{ui.pinCancel}</button>
+                        <button 
+                            onClick={savePin} 
+                            disabled={!pinTitle.trim()}
+                            className="flex-1 py-3 bg-[#006A71] text-white rounded-xl font-bold shadow-lg hover:bg-[#00555a] disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {editingMarker ? "Update" : ui.pinConfirm}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* Global Modals */}
         {showPlansModal && <PlansModal isOpen={showPlansModal} onClose={() => setShowPlansModal(false)} userProfile={userProfile} ui={ui} />}
-        {showLanguageModal && <LanguageModal isOpen={showLanguageModal} onClose={() => setShowLanguageModal(false)} ui={ui} />}
     </div>
   );
 };
 
-// Wrap com Error Boundary
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
