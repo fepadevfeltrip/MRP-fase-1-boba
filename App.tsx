@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, ReactNode } from 'react';
+import React, { Component, useState, useEffect, useRef, useCallback, ReactNode, ErrorInfo } from 'react';
 import { Message, Role, Language, UserLocation, UserProfile, LivingMarker, MarkerType } from './types';
 import { initializeChat, sendMessageToGemini, changeBotLanguage } from './services/geminiService';
 import { saveConversation, saveFeedback, getUser, getUserProfile, signOut, saveMarker, getMarkers, deleteMarker, updateMarker, subscribeToAuthChanges } from './services/supabaseService';
@@ -23,7 +23,7 @@ interface ErrorBoundaryState {
 }
 
 // Fix: Simplified ErrorBoundary to ensure proper property inheritance and inference from React.Component
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
@@ -33,7 +33,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
   }
 
