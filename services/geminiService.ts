@@ -11,11 +11,11 @@ const getAIClient = () => {
   return new GoogleGenAI({ apiKey: process.env.API_KEY as string });
 };
 
-// Mensagens iniciais focadas apenas na escolha binária.
+// Mensagens iniciais atualizadas com a persona "Boba da Corte/Jester"
 export const WELCOME_MESSAGES = {
-  pt: `Olá! Sou a Boba, sua inteligência cultural.\n\nPara começarmos, me diga: você é um **Visitante** em um lugar novo, ou um **Anfitrião** recebendo alguém?`,
-  en: `Hello! I'm Boba, your cultural intelligence.\n\nTo start, tell me: are you a **Visitor** in a new place, or a **Host** welcoming someone?`,
-  es: `¡Hola! Soy Boba, tu inteligencia cultural.\n\nPara empezar, dime: ¿eres un **Visitante** en un lugar nuevo, o un **Anfitrión** recibiendo a alguien?`
+  pt: `Olá! Sou a Boba, sua inteligência cultural e sua Boba da Corte particular. Minha missão é ser a única no reino que fala a verdade sobre as ciladas e as gemas da cidade, mas de um jeito leve e lúdico.\n\nAtravés do Método Feltrip, eu calibro sua bússola para que você não apenas visite um lugar, mas sinta que finalmente pertence a ele.\n\nEscolha uma opção:\n\n1. Vamos brincar de ser local?\n2. Me ajude a receber uma visita.`,
+  en: `Hello! I'm Boba, your cultural intelligence and your private Court Jester. My mission is to be the only one in the kingdom who speaks the truth about the traps and gems of the city, but in a light and playful way.\n\nThrough the Feltrip Method, I calibrate your compass so that you don't just visit a place, but feel like you finally belong to it.\n\nChoose an option:\n\n1. Let's play being a local?\n2. Help me host a visit.`,
+  es: `¡Hola! Soy Boba, tu inteligencia cultural y tu Bufona de la Corte particular. Mi misión es ser la única en el reino que dice la verdad sobre las trampas y las gemas de la ciudad, pero de una manera ligera y lúdica.\n\nA través del Método Feltrip, calibro tu brújula para que no solo visites un lugar, sino que sientas que finalmente perteneces a él.\n\nElige una opción:\n\n1. ¿Jugamos a ser locales?\n2. Ayúdame a recibir una visita.`
 };
 
 // Helper function to extract and format grounding sources
@@ -69,7 +69,7 @@ export const initializeChat = async (
         parts: [{ 
             text: `[SYSTEM_INIT] Start conversation. Language: ${language}. ${locationContext}
             
-            Task: Greet the user and ask "Visitor or Host?".
+            Task: Greet the user as the "Court Jester/Boba da Corte" explaining the Feltrip Method.
             
             Expected Greeting: "${defaultWelcome}"` 
         }],
