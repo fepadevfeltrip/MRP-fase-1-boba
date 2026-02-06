@@ -1,5 +1,5 @@
-
 import React from 'react';
+import { COLORS } from '../constants';
 
 interface TermsModalProps {
   isOpen: boolean;
@@ -11,40 +11,18 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose, ui }) =
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[3000] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl p-8 w-full max-w-sm shadow-2xl border border-[#EAA823]/20 relative overflow-hidden animate-in fade-in zoom-in duration-300">
-        
-        {/* Background Decorations */}
-        <div className="absolute top-[-20%] left-[-20%] w-32 h-32 bg-[#006A71]/10 rounded-full blur-2xl"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-24 h-24 bg-[#FF7D6B]/10 rounded-full blur-xl"></div>
-        
-        <button 
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-20"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
-
-        <div className="text-center relative z-10">
-            <div className="mx-auto w-12 h-12 bg-[#F8F8F4] rounded-full flex items-center justify-center mb-4 text-2xl shadow-sm border border-gray-100">
-                🛡️
-            </div>
-            
-            <h3 className="text-xl font-bold text-[#006A71] mb-4 tracking-tight">
-              {ui.termsTitle || "Privacidade & Dados"}
-            </h3>
-            
-            <p className="text-sm text-gray-600 leading-relaxed mb-6 text-left bg-[#F8F8F4] p-4 rounded-xl border border-gray-100">
-                {ui.termsContent}
-            </p>
-
-            <button
-                onClick={onClose}
-                className="w-full py-3 bg-[#006A71] text-white font-semibold rounded-full hover:bg-[#00555a] transition-colors shadow-md text-sm uppercase tracking-wide"
-            >
-                Entendi
-            </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[80vh] overflow-y-auto">
+        <h3 className={`text-lg font-bold text-[${COLORS.teal}] mb-4`} style={{ color: COLORS.teal }}>Manifesto Feltrip</h3>
+        <div className="space-y-4 text-sm text-gray-600 leading-relaxed">
+            <p><strong>1. Menos Tela, Mais Sola.</strong> A tecnologia deve servir para nos levar de volta ao mundo real, não para nos prender em interfaces.</p>
+            <p><strong>2. A Cidade é um Museu Vivo.</strong> Cada esquina tem uma história, cada prato é um documento cultural.</p>
+            <p><strong>3. Presença Relacional.</strong> Não somos turistas; somos viajantes em busca de conexão com o território, o corpo e o outro.</p>
+            <p className="text-xs text-gray-400 mt-6 pt-4 border-t">Ao usar a Boba, você concorda em ser provocado a sair do óbvio.</p>
         </div>
+        <button onClick={onClose} className={`mt-6 w-full py-3 bg-[${COLORS.teal}] text-white font-bold rounded-xl`} style={{ backgroundColor: COLORS.teal }}>
+          Entendido
+        </button>
       </div>
     </div>
   );

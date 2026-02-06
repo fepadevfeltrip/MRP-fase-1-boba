@@ -1,117 +1,162 @@
-
-import React, { useState } from 'react';
-import { Message, Role } from '../types';
+import React, { useState, useMemo } from 'react';
+import { Message, Role, BobaUiData } from '../types';
 import { BOBA_AVATAR_URL } from '../constants';
+import { GemCard } from './GemCard';
 
 interface MessageBubbleProps {
   message: Message;
-  onPin?: (text: string) => void; // Callback para pinar a mensagem (Premium feature)
+  onPin?: (text: string) => void; 
+  onAction?: (actionText: string) => void;
+  currentUser?: any; 
 }
 
-export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onPin }) => {
+export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onAction, currentUser }) => {
   const isUser = message.role === Role.USER;
   const [avatarUrl, setAvatarUrl] = useState(BOBA_AVATAR_URL);
   const [copied, setCopied] = useState(false);
 
-  // Formatter for bold text and links
-  const formatText = (text: string) => {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const rawText = message?.text || "";
+
+  // Parse Message
+  const { displayText, uiData } = useMemo(() => {
+    const splitMarker = '|||BOBA_UI_DATA|||';
+    const endMarker = '|||END_BOBA_UI_DATA|||';
     
-    return text.split('\n').map((line, i) => (
-      <React.Fragment key={i}>
-        {line.split(urlRegex).map((part, j) => {
-          if (part.match(urlRegex)) {
-            return (
-              <a 
-                key={j} 
-                href={part} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className={`font-medium underline ${isUser ? 'text-white' : 'text-[#006A71]'}`}
-              >
-                {part}
-              </a>
-            );
-          }
-          // Handle bold markdown
-          return part.split(/(\*\*.*?\*\*)/).map((subPart, k) => {
-            if (subPart.startsWith('**') && subPart.endsWith('**')) {
-              return <strong key={k} className="font-semibold">{subPart.slice(2, -2)}</strong>;
+    if (rawText.includes(splitMarker)) {
+        const parts = rawText.split(splitMarker);
+        const textContent = parts[0].trim();
+        let dataContent = parts[1];
+        if (dataContent && dataContent.includes(endMarker)) {
+            dataContent = dataContent.split(endMarker)[0];
+        }
+        try {
+            return { displayText: textContent, uiData: JSON.parse(dataContent) as BobaUiData };
+        } catch (e) {
+            return { displayText: rawText, uiData: null };
+        }
+    }
+    return { displayText: rawText, uiData: null };
+  }, [rawText]);
+
+  const buttonRegex = /\[(.*?)\](?!\()/g;
+
+  const renderContent = (text: string) => {
+    if (!text) return null;
+    const lines = text.split('\n');
+    
+    return lines.map((line, lineIndex) => {
+      const trimmed = line.trim();
+      const isPureButton = trimmed.startsWith('[') && trimmed.endsWith(']') && !trimmed.includes('](');
+      
+      if (isPureButton && !isUser && onAction) {
+         const btnText = trimmed.slice(1, -1);
+         const isCitySelection = btnText.includes('Rio') || btnText.includes('Paulo') || btnText.includes('Floripa');
+         
+         let btnClass = "block w-full text-left my-2 px-6 py-4 rounded-2xl shadow-sm transition-all font-bold text-sm border active:scale-[0.98] ";
+         
+         if (isCitySelection) {
+             btnClass += "bg-white text-boba-teal border-boba-mustard/50 hover:bg-boba-mustard/10 hover:shadow-md";
+         } else {
+             btnClass += "bg-gradient-to-r from-boba-teal to-[#00555a] text-white border-transparent hover:shadow-lg hover:-translate-y-0.5";
+         }
+
+         return (
+           <button key={`btn-${lineIndex}`} onClick={() => onAction(btnText)} className={btnClass}>
+             {btnText}
+           </button>
+         );
+      }
+
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      const parts = line.split(urlRegex);
+
+      return (
+        <div key={lineIndex} className="min-h-[1.5em] mb-1">
+          {parts.map((part, j) => {
+            if (part.match(urlRegex)) {
+              return (
+                <a key={j} href={part} target="_blank" rel="noopener noreferrer" className={`font-medium underline break-all hover:opacity-100 ${isUser ? 'text-white opacity-90' : 'text-boba-teal opacity-90'}`}>
+                  {part}
+                </a>
+              );
             }
-            return <span key={k}>{subPart}</span>;
-          });
-        })}
-        <br />
-      </React.Fragment>
-    ));
+            return part.split(/(\*\*.*?\*\*)/).map((subPart, k) => {
+              if (subPart.startsWith('**') && subPart.endsWith('**')) {
+                return <strong key={k} className={`font-bold ${isUser ? 'text-white' : 'text-boba-teal'}`}>{subPart.slice(2, -2)}</strong>;
+              }
+              if (!isUser && onAction) {
+                  const subPartsWithButtons = subPart.split(buttonRegex);
+                  if (subPartsWithButtons.length > 1) {
+                      return subPartsWithButtons.map((sp, idx) => {
+                           if (idx % 2 === 1) { 
+                               return (
+                                   <button 
+                                      key={`ib-${k}-${idx}`} 
+                                      onClick={() => onAction(sp)} 
+                                      className="inline-block mx-1 px-3 py-1 bg-boba-mustard/10 text-boba-teal border border-boba-teal/20 rounded-full text-xs font-bold hover:bg-boba-mustard/20 transition-colors align-middle"
+                                   >
+                                     {sp}
+                                   </button>
+                               );
+                           }
+                           return <span key={`txt-${k}-${idx}`}>{sp}</span>;
+                      });
+                  }
+              }
+              return <span key={k}>{subPart}</span>;
+            });
+          })}
+        </div>
+      );
+    });
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(message.text);
+    navigator.clipboard.writeText(displayText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const hasUiData = !isUser && uiData && uiData.gems && Array.isArray(uiData.gems);
+
   return (
-    <div className={`flex w-full mb-8 group ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div className={`flex w-full mb-6 group ${isUser ? 'justify-end' : 'justify-start'}`}>
       {!isUser && (
-        <div className="flex-shrink-0 mr-3 self-end sm:self-auto">
-          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#EAA823] bg-white shadow-sm">
-             <img 
-               src={avatarUrl} 
-               alt="Boba Avatar" 
-               className="w-full h-full object-cover"
-               onError={(e) => {
-                 setAvatarUrl("https://ui-avatars.com/api/?name=Boba&background=006A71&color=fff&size=128");
-               }}
-             />
+        <div className="flex-shrink-0 mr-3 mt-2">
+          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-boba-mustard bg-white shadow-sm">
+             <img src={avatarUrl} alt="Boba" className="w-full h-full object-cover" onError={() => setAvatarUrl("https://ui-avatars.com/api/?name=Boba&background=006A71&color=fff")} />
           </div>
         </div>
       )}
       
-      <div className="relative max-w-[85%] sm:max-w-[75%]">
-        <div
-          className={`px-5 py-3.5 rounded-2xl text-base leading-relaxed shadow-sm
-            ${
-              isUser
-                ? 'bg-[#006A71] text-[#F8F8F4] rounded-br-none' 
-                : 'bg-white text-gray-800 border border-[#EAA823]/30 rounded-bl-none'
-            }
-          `}
-        >
-          <div className="whitespace-pre-wrap font-sans">
-             {formatText(message.text)}
+      <div className={`relative max-w-[90%] sm:max-w-[85%] ${!isUser ? 'w-full' : ''}`}>
+        <div className={`px-5 py-4 rounded-[1.5rem] text-base leading-relaxed shadow-sm ${isUser ? 'bg-boba-teal text-boba-offWhite rounded-br-none shadow-md' : 'bg-white text-gray-700 border border-boba-mustard/20 rounded-bl-none shadow-sm'}`}>
+          <div className="font-sans whitespace-pre-wrap">
+             {renderContent(displayText)}
           </div>
+
+          {hasUiData && uiData && (
+              <div className="mt-6 border-t border-gray-100 pt-4 animate-fade-in">
+                  {uiData.gems.length > 0 && (
+                      <>
+                        <h4 className="text-boba-teal font-bold text-[10px] uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                            <span>💎</span> Curadoria Feltrip
+                        </h4>
+                        <div className="flex flex-col gap-3">
+                            {uiData.gems.map((gem, idx) => (
+                                <GemCard key={idx} gem={gem} currentUser={currentUser} emotionalStatus={uiData.emotional_status} />
+                            ))}
+                        </div>
+                      </>
+                  )}
+              </div>
+          )}
         </div>
 
-        {/* Action Buttons (Copy & Pin) - Sempre visíveis para facilitar o uso */}
         {!isUser && (
-          <div className="absolute -top-3 right-0 flex gap-2">
-            
-            {/* Copy Button */}
-            <button 
-              onClick={handleCopy}
-              className="bg-white text-gray-400 hover:text-[#006A71] p-1.5 rounded-full shadow-md border border-gray-200 transition-all hover:scale-105"
-              title="Copiar texto"
-            >
-              {copied ? (
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-              )}
-            </button>
-
-            {/* Pin Button (Premium) */}
-            {onPin && (
-              <button 
-                onClick={() => onPin(message.text)}
-                className="bg-white text-[#EAA823] p-1.5 rounded-full shadow-md border border-[#EAA823]/20 transition-all hover:scale-110 hover:bg-[#EAA823] hover:text-white"
-                title="Pinar no Mapa Vivo"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-              </button>
-            )}
-          </div>
+          <button onClick={handleCopy} className="absolute -bottom-6 left-4 text-[10px] text-gray-400 hover:text-boba-teal opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-wide">
+            {copied ? 'Copiado!' : 'Copiar'}
+          </button>
         )}
       </div>
     </div>

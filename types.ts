@@ -1,10 +1,7 @@
-
 export enum Role {
   USER = 'user',
   MODEL = 'model'
 }
-
-export type Language = 'pt' | 'en' | 'es';
 
 export interface Message {
   id: string;
@@ -13,40 +10,43 @@ export interface Message {
   timestamp: number;
 }
 
-export interface ChatState {
-  messages: Message[];
-  isLoading: boolean;
-  error: string | null;
-}
+export type Language = 'pt' | 'en';
 
 export interface UserLocation {
+  latitude: number;
+  longitude: number;
   city?: string;
-  country_name?: string;
-  ip?: string;
-  latitude?: number;
-  longitude?: number;
+  country?: string;
 }
 
-// Novos tipos para o sistema de Planos
-export type SubscriptionTier = 'free' | 'premium' | 'immersion';
-
-export interface UserProfile {
-  id: string;
-  email: string;
-  subscription_tier: SubscriptionTier;
-  subscription_status: 'active' | 'past_due' | 'canceled' | 'none';
-  created_at: string;
+export interface GemData {
+  name: string;
+  type: string;
+  description: string;
+  address?: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
+  ritual?: string;
 }
 
-// Tipos do Mapa Vivo
-export type MarkerType = 'presence' | 'place' | 'culture';
+export interface BobaUiData {
+  emotional_status: string;
+  gems: GemData[];
+  mrp_scores?: {
+    body: number;
+    territory: number;
+    identity: number;
+    other: number;
+    space: number;
+  };
+}
 
 export interface LivingMarker {
-  id: string;
-  user_id: string;
-  lat: number;
-  lng: number;
-  content: string; // O que a Boba disse
-  type: MarkerType; // Tag
-  created_at: string;
+    id: string;
+    lat: number;
+    lng: number;
+    type: 'presence' | 'place' | 'culture';
+    title: string;
 }

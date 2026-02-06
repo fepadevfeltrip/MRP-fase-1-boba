@@ -1,11 +1,12 @@
 import React from 'react';
+import { COLORS } from '../constants';
 
 export const TypingIndicator: React.FC = () => {
   return (
-    <div className="flex space-x-1 items-center p-2 bg-gray-100 rounded-2xl w-fit ml-10">
-      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+    <div className="flex items-center space-x-1 p-4 bg-white rounded-2xl w-fit border border-gray-100 shadow-sm">
+      <div className={`w-2 h-2 rounded-full bg-[${COLORS.teal}] animate-bounce`} style={{ animationDelay: '0ms', backgroundColor: COLORS.teal }}></div>
+      <div className={`w-2 h-2 rounded-full bg-[${COLORS.teal}] animate-bounce`} style={{ animationDelay: '150ms', backgroundColor: COLORS.teal }}></div>
+      <div className={`w-2 h-2 rounded-full bg-[${COLORS.teal}] animate-bounce`} style={{ animationDelay: '300ms', backgroundColor: COLORS.teal }}></div>
     </div>
   );
 };
