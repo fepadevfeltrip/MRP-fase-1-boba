@@ -2,15 +2,15 @@ import React, { useEffect } from 'react';
 import { BOBA_AVATAR_URL } from './constants';
 
 // O Link do seu NOVO aplicativo
-const NEW_APP_URL = "https://boba-ai-presence-planner-690453797160.us-west1.run.app";
+const NEW_APP_URL = "https://gemaiv2free.vercel.app";
 
 const App: React.FC = () => {
   
   useEffect(() => {
-    // Redireciona automaticamente após 2 segundos para o usuário ler a mensagem
+    // Redireciona via JavaScript como redundância
     const timer = setTimeout(() => {
         window.location.href = NEW_APP_URL;
-    }, 2500);
+    }, 1000);
 
     return () => clearTimeout(timer);
   }, []);
@@ -22,7 +22,7 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col items-center justify-center h-[100dvh] bg-boba-offWhite font-sans text-slate-800 relative overflow-hidden p-6 text-center">
        
-       {/* Background - Fixed Layout */}
+       {/* Background Decorativo */}
        <div className="absolute inset-0 pointer-events-none z-0 opacity-40">
             <div className="absolute top-[-5%] right-[-5%] w-[400px] h-[400px] bg-boba-coral rounded-full blur-[80px]"></div>
             <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-boba-teal rounded-full blur-[100px] opacity-30"></div>
